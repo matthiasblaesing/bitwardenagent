@@ -1,0 +1,30 @@
+@startuml
+
+hide empty description
+
+state CanServeCiphers {
+    state Offline
+    state OfflineWithToken
+    state Syncing
+    state Synced
+}
+
+[*] --> Started
+Started --> LocalStatePresent : Configuration exists\nand holds sync data
+LocalStatePresent --> Offline : Master password
+LocalStatePresent --> Initial : Clear
+Started --> Initial
+Initial --> InitialSync : Input Server,\nUsername, Password
+Offline --> OfflineWithToken : Access/Refresh\nToken present
+OfflineWithToken --> Synced : Successful\nsync
+OfflineWithToken --> Offline : Authorization\nerror
+InitialSync --> Synced : Login and Sync\nsuccessful
+InitialSync --> Initial :  Login or Sync\nfail
+Offline --> Syncing : Input Server,\nUsername, Password
+Syncing --> Offline : Authorization\nerror
+Syncing --> Synced : Successful\nsync
+Syncing --> OfflineWithToken : Communication\nError
+Synced --> Syncing : Init Sync
+CanServeCiphers -r-> Initial : Clear
+
+@enduml

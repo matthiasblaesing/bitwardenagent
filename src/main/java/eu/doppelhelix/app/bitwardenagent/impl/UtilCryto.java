@@ -24,6 +24,7 @@ import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -123,6 +124,33 @@ public class UtilCryto {
         return userkeyDecrypted;
     }
 
+    public static String encryptString(EncryptionKey encryptionKey, String payload) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException {
+        if (payload == null) {
+            return null;
+        }
+        return encryptByteArray(encryptionKey, payload.getBytes(UTF_8));
+    }
+
+    public static String encryptByteArray(EncryptionKey encryptionKey, byte[] payload) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException {
+        if (payload == null) {
+            return null;
+        }
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        byte[] iv = new byte[cipher.getBlockSize()];
+        SecureRandom.getInstanceStrong().nextBytes(iv);
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(encryptionKey.enc(), "AES"), new IvParameterSpec(iv));
+        byte[] data = cipher.doFinal(payload);
+        byte[] mac = createMac(encryptionKey.mac(), iv, data);
+
+        return "2."
+                + Base64.getEncoder().encodeToString(iv)
+                + "|"
+                + Base64.getEncoder().encodeToString(data)
+                + "|"
+                + Base64.getEncoder().encodeToString(mac);
+    }
+
     public static byte[] decryptByteArray(PrivateKey encryptionKey, String payload) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException {
         String[] encryptedParts = payload.split("\\.", 2);
         String encryptionScheme = encryptedParts[0];
@@ -140,27 +168,32 @@ public class UtilCryto {
         return payloadDecrypted;
     }
 
-    private static void checkMac(byte[] macKey, byte[] userkeyIv, byte[] userkeyData, byte[] userkeyMac) throws IllegalStateException, InvalidKeyException, NoSuchAlgorithmException {
-        Mac hmac256 = Mac.getInstance("HmacSHA256");
-        hmac256.init(new SecretKeySpec(macKey, "HmacSHA256"));
-        hmac256.update(userkeyIv);
-        byte[] refMac = hmac256.doFinal(userkeyData);
+    private static void checkMac(byte[] macKey, byte[] iv, byte[] data, byte[] targetMac) throws IllegalStateException, InvalidKeyException, NoSuchAlgorithmException {
+        byte[] refMac = createMac(macKey, iv, data);
 
-        if (!Arrays.equals(refMac, userkeyMac)) {
+        if (!Arrays.equals(refMac, targetMac)) {
             System.out.println("Ref:        " + Hex.toHexString(refMac));
-            System.out.println("Calculated: " + Hex.toHexString(userkeyMac));
+            System.out.println("Calculated: " + Hex.toHexString(targetMac));
             throw new IllegalStateException("Mac did not match!");
         }
+    }
+
+    private static byte[] createMac(byte[] macKey, byte[] iv, byte[] data) throws IllegalStateException, InvalidKeyException, NoSuchAlgorithmException {
+        Mac hmac256 = Mac.getInstance("HmacSHA256");
+        hmac256.init(new SecretKeySpec(macKey, "HmacSHA256"));
+        hmac256.update(iv);
+        byte[] refMac = hmac256.doFinal(data);
+        return refMac;
     }
 
     public static byte[] deriveMasterKey(char[] password, String email, PreloginResult preloginResult) {
         // see: https://github.com/bitwarden/sdk-internal/blob/f75f62ed0d17cb99bfc837b230ea61943beaa9bb/crates/bitwarden-crypto/src/keys/kdf.rs#L38-L85
         return switch (preloginResult.kdf()) {
-            case 0:
+            case PBKDF2:
                 PKCS5S2ParametersGenerator gen1 = new PKCS5S2ParametersGenerator(DigestFactory.createSHA256());
                 gen1.init(encodeUTF8(password), encodeUTF8(email), preloginResult.kdfIterations());
                 yield ((KeyParameter) gen1.generateDerivedParameters(256)).getKey();
-            case 1:
+            case Argon2Id:
                 byte[] saltInput = encodeUTF8(email);
                 Digest sha256 = DigestFactory.createSHA256();
                 sha256.update(saltInput, 0, saltInput.length);
@@ -178,8 +211,6 @@ public class UtilCryto {
                 byte[] result = new byte[32];
                 argon.generateBytes(password, result);
                 yield result;
-            default:
-                throw new IllegalArgumentException("Unsupported KDF: " + preloginResult.kdf());
         };
     }
 
@@ -188,6 +219,10 @@ public class UtilCryto {
         gen.init(masterKey, encodeUTF8(password), 1);
         String masterPasswordHash = Base64.getEncoder().encodeToString(((KeyParameter) gen.generateDerivedParameters(256)).getKey());
         return masterPasswordHash;
+    }
+
+    public static EncryptionKey encryptionKeyFromMasterKey(byte[] masterKey) {
+        return new EncryptionKey(deriveHkdfSha256(masterKey, "enc"), deriveHkdfSha256(masterKey, "mac"));
     }
 
     public static byte[] deriveHkdfSha256(byte[] sk, String info) throws IllegalArgumentException, DataLengthException {

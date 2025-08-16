@@ -15,14 +15,19 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl.http;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record PreloginResult(
-        int kdf,
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT)
+        KDF kdf,
         int kdfIterations,
         Integer kdfMemory,
         Integer kdfParallelism
         ) {
-
+    public enum KDF {
+        PBKDF2,
+        Argon2Id
+    }
 }

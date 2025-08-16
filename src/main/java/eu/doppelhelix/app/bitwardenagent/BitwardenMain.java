@@ -19,14 +19,13 @@ import com.formdev.flatlaf.FlatLightLaf;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.http.ErrorResult;
 import eu.doppelhelix.app.bitwardenagent.impl.http.FieldData;
-import eu.doppelhelix.app.bitwardenagent.impl.http.SyncData;
 import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.net.URI;
 import java.util.Arrays;
-import java.util.UUID;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,6 +33,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+
 import javax.swing.JTextField;
 
 /**
@@ -45,68 +45,87 @@ public class BitwardenMain {
         Logger log = Logger.getLogger(BitwardenClient.class.getName());
         log.setLevel(Level.FINEST);
 
-        for(Handler h: Logger.getLogger("").getHandlers()) {
+        for (Handler h : Logger.getLogger("").getHandlers()) {
             h.setLevel(Level.ALL);
         }
 
         FlatLightLaf.setup();
 
-        JTextField serverField = new JTextField("https://vault.bitwarden.eu/", 20);
-        JTextField emailField = new JTextField("", 20);
-        JPasswordField passwordField = new JPasswordField("", 20);
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.add(new JLabel("Server URL:"), new GridBagConstraints(0, 0, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
-        panel.add(serverField, new GridBagConstraints(0, 1, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
-        panel.add(new JLabel("E-Mail:"), new GridBagConstraints(0, 2, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
-        panel.add(emailField, new GridBagConstraints(0, 3, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
-        panel.add(new JLabel("Master Password:"), new GridBagConstraints(0, 4, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
-        panel.add(passwordField, new GridBagConstraints(0, 5, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
-        int result = JOptionPane.showConfirmDialog(null, panel, "Master Password", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        BitwardenClient bwClient = new BitwardenClient();
 
-        if (result != JOptionPane.OK_OPTION) {
-            return;
-        }
+        if (bwClient.isNeedsUnlocking()) {
+            JPasswordField passwordField = new JPasswordField("", 20);
+            JPanel panel = new JPanel(new GridBagLayout());
+            panel.add(new JLabel("Master Password:"), new GridBagConstraints(0, 4, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            panel.add(passwordField, new GridBagConstraints(0, 5, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            int result = JOptionPane.showConfirmDialog(null, panel, "Master Password", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 
-        BitwardenClient bwClient = new BitwardenClient(
-                UUID.fromString("7c446598-e200-4293-aabd-274874f78aad"),
-                null
-        );
+            if (result != JOptionPane.OK_OPTION) {
+                return;
+            }
 
-        char[] password = passwordField.getPassword();
-        try {
+            char[] password = passwordField.getPassword();
             try {
-                bwClient.login(emailField.getText(), password);
-            } catch (WebApplicationException ex) {
-                if (ex.getResponse().getStatus() == 400) {
-                    ErrorResult er = ex.getResponse().readEntity(ErrorResult.class);
-                    if ("device_error".equals(er.error())) {
-                        String otp = JOptionPane.showInputDialog(null, "Device OTP Code: ", "Device OTP", JOptionPane.QUESTION_MESSAGE);
-                        bwClient.login(emailField.getText(), password, otp);
-                    } else {
-                        throw ex;
-                    }
-                }
+                bwClient.unlock(passwordField.getPassword());
             } finally {
                 Arrays.fill(password, (char) 0);
             }
-        } catch (WebApplicationException ex) {
-            try {
-                ErrorResult er = ex.getResponse().readEntity(ErrorResult.class);
-                if(er.ErrorModel() != null && er.ErrorModel().Message() != null) {
-                    System.err.println(er.ErrorModel().Message());
-                } else {
-                    System.err.println(er.error_description());
-                }
-            } catch (ProcessingException ex2) {
-                // Ok, not an ErrorResult
-                System.err.println(ex.getMessage());
-            }
-            System.exit(1);
         }
 
-        SyncData sync = bwClient.sync();
+        if (!bwClient.isAuthenticated()) {
+            JTextField serverField = new JTextField(bwClient.getBaseURI().toString(), 20);
+            JTextField emailField = new JTextField(bwClient.getEmail(), 20);
+            JPasswordField passwordField = new JPasswordField("", 20);
+            JPanel panel = new JPanel(new GridBagLayout());
+            panel.add(new JLabel("Server URL:"), new GridBagConstraints(0, 0, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            panel.add(serverField, new GridBagConstraints(0, 1, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            panel.add(new JLabel("E-Mail:"), new GridBagConstraints(0, 2, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            panel.add(emailField, new GridBagConstraints(0, 3, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            panel.add(new JLabel("Master Password:"), new GridBagConstraints(0, 4, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            panel.add(passwordField, new GridBagConstraints(0, 5, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            int result = JOptionPane.showConfirmDialog(null, panel, "Master Password", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 
-        sync.ciphers()
+            if (result != JOptionPane.OK_OPTION) {
+                return;
+            }
+
+            URI baseUri = URI.create(serverField.getText());
+            char[] password = passwordField.getPassword();
+            try {
+                try {
+                    bwClient.login(baseUri, emailField.getText(), password);
+                } catch (WebApplicationException ex) {
+                    if (ex.getResponse().getStatus() == 400) {
+                        ErrorResult er = ex.getResponse().readEntity(ErrorResult.class);
+                        if ("device_error".equals(er.error())) {
+                            String otp = JOptionPane.showInputDialog(null, "Device OTP Code: ", "Device OTP", JOptionPane.QUESTION_MESSAGE);
+                            bwClient.login(baseUri, emailField.getText(), password, otp);
+                        } else {
+                            throw ex;
+                        }
+                    }
+                } finally {
+                    Arrays.fill(password, (char) 0);
+                }
+            } catch (WebApplicationException ex) {
+                try {
+                    ErrorResult er = ex.getResponse().readEntity(ErrorResult.class);
+                    if (er.ErrorModel() != null && er.ErrorModel().Message() != null) {
+                        System.err.println(er.ErrorModel().Message());
+                    } else {
+                        System.err.println(er.error_description());
+                    }
+                } catch (ProcessingException ex2) {
+                    // Ok, not an ErrorResultä-
+                    System.err.println(ex.getMessage());
+                }
+                System.exit(1);
+            }
+        }
+
+        bwClient.sync();
+
+        bwClient.getSyncData().ciphers()
                 .stream()
                 .forEach(cd -> {
                     try {

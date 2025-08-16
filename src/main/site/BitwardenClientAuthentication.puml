@@ -1,0 +1,30 @@
+@startuml
+
+hide empty description
+
+state Authenicating {
+    state MethodSelection
+
+MethodSelection --> WaitingForSsoReply : SSO
+MethodSelection --> EmailMasterPass
+EmailMasterPass --> [*] : Set Token\n(Success)
+EmailMasterPass --> Select2FA : TwoFactorProviders\npresent
+Select2FA --> EmailOTP : Request-Email
+Select2FA --> TOTPInput : TOTP
+TOTPInput --> [*] : Set Token\n(Success)
+EmailOTP --> [*] : Set Token\n(Success)
+EmailMasterPass --> QueryOTP : Device Error
+QueryOTP --> [*] : Set Token\n(Success)
+WaitingForSsoReply --> SsoTokenExchange : Receive Token
+SsoTokenExchange --> [*] : Set Token
+
+note left of MethodSelection : Server Selector
+}
+
+[*] --> MethodSelection
+Authenicating --> [*] : Cancel
+
+
+
+
+@enduml

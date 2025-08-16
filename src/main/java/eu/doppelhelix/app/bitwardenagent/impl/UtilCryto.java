@@ -50,6 +50,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.util.DigestFactory;
 import org.bouncycastle.util.encoders.Hex;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class UtilCryto {
@@ -231,5 +232,27 @@ public class UtilCryto {
         byte[] encKey = new byte[32];
         hkdf.generateBytes(encKey, 0, encKey.length);
         return encKey;
+    }
+
+    public static String generateRandomString(int length) throws NoSuchAlgorithmException {
+        StringBuilder result = new StringBuilder(length);
+        String candidates = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom
+                .getInstanceStrong()
+                .ints(0, candidates.length())
+                .takeWhile(i -> result.length() < length)
+                .forEach(i -> result.append(candidates.charAt(i)));
+        return result.toString();
+    }
+
+    public static String createCodeChallenge(String inputString) {
+        byte[] input = inputString.getBytes(US_ASCII);
+        Digest sha256 = DigestFactory.createSHA256();
+        sha256.update(input, 0, input.length);
+        byte[] hash = new byte[sha256.getDigestSize()];
+        sha256.doFinal(hash, 0);
+        String base64String = Base64.getUrlEncoder().encodeToString(hash);
+        // String trailing padding
+        return base64String.replaceFirst("=+$", "");
     }
 }

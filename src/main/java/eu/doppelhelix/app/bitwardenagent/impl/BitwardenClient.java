@@ -188,6 +188,36 @@ public class BitwardenClient implements Closeable {
         sync();
     }
 
+    public void loginSSO(URI baseURI, String email, char[] password, String code, String state, String codeVerifier, String redirectUri) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException  {
+        this.baseURI = baseURI == null ? this.baseURI : baseURI;
+        baseTarget = client.target(baseURI);
+        preloginTarget = baseTarget.path("identity/accounts/prelogin");
+        tokenTarget = baseTarget.path("identity/connect/token");
+        syncTarget = baseTarget.path("api/sync").queryParam("excludeDomains", "true");
+
+        PreloginResult preloginResult = preloginTarget
+                .request()
+                .post(Entity.json(new PreloginRequest(email)), PreloginResult.class);
+
+        this.preloginResult = preloginResult;
+        this.email = email;
+        byte[] masterKey = deriveMasterKey(password, email, preloginResult);
+        stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
+        masterPasswordHash = deriveMasterKeyHash(masterKey, password);
+
+        TokenResult loginResponse = tokenTarget
+                .request()
+                .header("Device-Type", 25)
+                .post(Entity.form(tokenRequestSSO(code, codeVerifier, redirectUri)), TokenResult.class);
+
+        this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refresh_token());
+        this.accessToken = loginResponse.access_token();
+
+        store();
+
+        sync();
+    }
+
     public void sync() throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
         TokenResult loginResponse = tokenTarget
                 .request()
@@ -255,6 +285,20 @@ public class BitwardenClient implements Closeable {
         if (newDeviceOtp != null) {
             form.param("newDeviceOtp", newDeviceOtp);
         }
+        return form;
+    }
+
+    private Form tokenRequestSSO(String code, String codeVerifier, String redirectUri) {
+        Form form = new Form();
+        form.param("scope", "api offline_access");
+        form.param("client_id", "cli");
+        form.param("deviceType", "25");
+        form.param("deviceIdentifier", deviceId.toString());
+        form.param("deviceName", deviceName);
+        form.param("grant_type", "authorization_code");
+        form.param("code", code);
+        form.param("code_verifier", codeVerifier);
+        form.param("redirect_uri", redirectUri);
         return form;
     }
 

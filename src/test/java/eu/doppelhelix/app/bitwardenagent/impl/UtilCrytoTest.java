@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptionKeyFromMasterKey;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,6 +52,14 @@ public class UtilCrytoTest {
         byte[] decrypted = UtilCryto.decryptByteArray(ek, encryptedString);
 
         assertArrayEquals(input, decrypted);
+    }
+
+    @Test
+    public void testCreateCodeChallenge() {
+        String verifier = "AQYWOssOrNQ4hIMoC8fZD2JJwFsFDs66dGGZjYyr7TmF9fK8ynOM3N930b7zT0qI";
+        String challenge = "V-uWjYbX8D_uOjt6Vbdifx7dOTlZmQCqnA58JTKiojw";
+
+        assertEquals(UtilCryto.createCodeChallenge(verifier), challenge);
     }
 
 }

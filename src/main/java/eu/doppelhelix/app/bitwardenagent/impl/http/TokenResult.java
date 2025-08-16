@@ -16,23 +16,36 @@
 package eu.doppelhelix.app.bitwardenagent.impl.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record TokenResult(
-        String access_token,
-        int expires_in,
-        String token_type,
-        String refresh_token,
+        @JsonProperty("access_token")
+        String accessToken,
+        @JsonProperty("expires_in")
+        int expiresIn,
+        @JsonProperty("token_type")
+        String tokenType,
+        @JsonProperty("refresh_token")
+        String refreshToken,
         String scope,
-        String PrivateKey,
+        @JsonProperty("privateKey")
+        String privateKey,
         String key,
-        boolean ForcePasswordreset,
+        @JsonProperty("ForcePasswordreset")
+        boolean forcePasswordreset,
+        @JsonProperty("resetMasterPassword")
         boolean ResetMasterPassword,
-        int Kdf,
-        Integer KdfIterations,
-        Integer KdfMemory,
-        Integer KdfParallelism,
-        UserDecryptionOptions UserDecryptionOptions
+        @JsonProperty("Kdf")
+        int kdf,
+        @JsonProperty("KdfIterations")
+        Integer kdfIterations,
+        @JsonProperty("KdfMemory")
+        Integer kdfMemory,
+        @JsonProperty("KdfParallelism")
+        Integer kdfParallelism,
+        @JsonProperty("UserDecryptionOptions")
+        UserDecryptionOptions userDecryptionOptions
         ) {
 
 }

@@ -75,9 +75,6 @@ public class BitwardenClient implements Closeable {
     private PreloginResult preloginResult;
     private URI baseURI = URI.create("https://vault.bitwarden.eu/");
     private WebTarget baseTarget;
-    private WebTarget preloginTarget;
-    private WebTarget tokenTarget;
-    private WebTarget syncTarget;
     private EncryptionKey stretchedMasterKey;
     private String masterPasswordHash;
     private EncryptionKey userKey;
@@ -135,9 +132,6 @@ public class BitwardenClient implements Closeable {
 
     public void unlock(char[] password) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
         baseTarget = client.target(baseURI);
-        preloginTarget = baseTarget.path("identity/accounts/prelogin");
-        tokenTarget = baseTarget.path("identity/connect/token");
-        syncTarget = baseTarget.path("api/sync").queryParam("excludeDomains", "true");
 
         byte[] masterKey = deriveMasterKey(password, email, this.preloginResult);
         stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
@@ -161,11 +155,9 @@ public class BitwardenClient implements Closeable {
     public void login(URI baseURI, String email, char[] password, String otp) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException  {
         this.baseURI = baseURI == null ? this.baseURI : baseURI;
         baseTarget = client.target(baseURI);
-        preloginTarget = baseTarget.path("identity/accounts/prelogin");
-        tokenTarget = baseTarget.path("identity/connect/token");
-        syncTarget = baseTarget.path("api/sync").queryParam("excludeDomains", "true");
 
-        PreloginResult preloginResult = preloginTarget
+        PreloginResult preloginResult = baseTarget
+                .path("identity/accounts/prelogin")
                 .request()
                 .post(Entity.json(new PreloginRequest(email)), PreloginResult.class);
 
@@ -175,13 +167,14 @@ public class BitwardenClient implements Closeable {
         stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
         masterPasswordHash = deriveMasterKeyHash(masterKey, password);
 
-        TokenResult loginResponse = tokenTarget
+        TokenResult loginResponse = baseTarget
+                .path("identity/connect/token")
                 .request()
                 .header("Device-Type", 25)
                 .post(Entity.form(tokenRequestPwd(otp)), TokenResult.class);
 
-        this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refresh_token());
-        this.accessToken = loginResponse.access_token();
+        this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
+        this.accessToken = loginResponse.accessToken();
 
         store();
 
@@ -191,11 +184,9 @@ public class BitwardenClient implements Closeable {
     public void loginSSO(URI baseURI, String email, char[] password, String code, String state, String codeVerifier, String redirectUri) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException  {
         this.baseURI = baseURI == null ? this.baseURI : baseURI;
         baseTarget = client.target(baseURI);
-        preloginTarget = baseTarget.path("identity/accounts/prelogin");
-        tokenTarget = baseTarget.path("identity/connect/token");
-        syncTarget = baseTarget.path("api/sync").queryParam("excludeDomains", "true");
 
-        PreloginResult preloginResult = preloginTarget
+        PreloginResult preloginResult = baseTarget
+                .path("identity/accounts/prelogin")
                 .request()
                 .post(Entity.json(new PreloginRequest(email)), PreloginResult.class);
 
@@ -205,13 +196,14 @@ public class BitwardenClient implements Closeable {
         stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
         masterPasswordHash = deriveMasterKeyHash(masterKey, password);
 
-        TokenResult loginResponse = tokenTarget
+        TokenResult loginResponse = baseTarget
+                .path("identity/connect/token")
                 .request()
                 .header("Device-Type", 25)
                 .post(Entity.form(tokenRequestSSO(code, codeVerifier, redirectUri)), TokenResult.class);
 
-        this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refresh_token());
-        this.accessToken = loginResponse.access_token();
+        this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
+        this.accessToken = loginResponse.accessToken();
 
         store();
 
@@ -219,13 +211,19 @@ public class BitwardenClient implements Closeable {
     }
 
     public void sync() throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
-        TokenResult loginResponse = tokenTarget
+        TokenResult loginResponse = baseTarget
+                .path("identity/connect/token")
                 .request()
                 .header("Device-Type", 25)
                 .post(Entity.form(tokenRequestToken(UtilCryto.decryptString(stretchedMasterKey, refreshToken))), TokenResult.class);
 
-        syncData = syncTarget.request()
-                .header("Authorization", "Bearer " + loginResponse.access_token())
+        refreshToken = loginResponse.accessToken();
+
+        syncData = baseTarget
+                .path("api/sync")
+                .queryParam("excludeDomains", "true")
+                .request()
+                .header("Authorization", "Bearer " + loginResponse.accessToken())
                 .get(SyncData.class);
 
         userKey = decryptKey(stretchedMasterKey, syncData.profile().key());
@@ -235,6 +233,8 @@ public class BitwardenClient implements Closeable {
             organizationKeysBuilder.put(od.id(), decryptKey(userPrivateKey, od.key()));
         }
         organizationKeys = organizationKeysBuilder;
+
+        store();
     }
 
     public SyncData getSyncData() {

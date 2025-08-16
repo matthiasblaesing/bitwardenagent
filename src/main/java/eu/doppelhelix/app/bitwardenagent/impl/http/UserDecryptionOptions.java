@@ -16,8 +16,13 @@
 package eu.doppelhelix.app.bitwardenagent.impl.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record UserDecryptionOptions(boolean HasMasterPassword, String Object) {
+public record UserDecryptionOptions(
+        @JsonProperty("HasMasterPassword")
+        boolean hasMasterPassword,
+        @JsonProperty("object")
+        String Object) {
 
 }

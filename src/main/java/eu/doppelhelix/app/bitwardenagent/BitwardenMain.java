@@ -201,10 +201,10 @@ public class BitwardenMain {
             } catch (WebApplicationException ex) {
                 try {
                     ErrorResult er = ex.getResponse().readEntity(ErrorResult.class);
-                    if (er.ErrorModel() != null && er.ErrorModel().Message() != null) {
-                        System.err.println(er.ErrorModel().Message());
+                    if (er.errorModel() != null && er.errorModel().message() != null) {
+                        System.err.println(er.errorModel().message());
                     } else {
-                        System.err.println(er.error_description());
+                        System.err.println(er.errorDescription());
                     }
                 } catch (ProcessingException ex2) {
                     // Ok, not an ErrorResultä-

@@ -16,12 +16,15 @@
 package eu.doppelhelix.app.bitwardenagent.impl.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ErrorResult(
         String error,
-        String error_description,
-        ErrorModel ErrorModel
+        @JsonProperty("error_description")
+        String errorDescription,
+        @JsonProperty("ErrorModel")
+        ErrorModel errorModel
         ) {
 
 }

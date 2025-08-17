@@ -16,7 +16,9 @@ EmailOTP --> [*] : Set Token\n(Success)
 EmailMasterPass --> QueryOTP : Device Error
 QueryOTP --> [*] : Set Token\n(Success)
 WaitingForSsoReply --> SsoTokenExchange : Receive Token
-SsoTokenExchange --> [*] : Set Token
+SsoTokenExchange --> QueryMasterPassword : Set Token
+QueryMasterPassword --> [*] : Set Token
+
 
 note left of MethodSelection : Server Selector
 }

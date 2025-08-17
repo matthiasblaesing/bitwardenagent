@@ -15,6 +15,7 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.doppelhelix.app.bitwardenagent.Configuration;
 import eu.doppelhelix.app.bitwardenagent.impl.http.CipherData;
@@ -37,6 +38,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -181,26 +183,42 @@ public class BitwardenClient implements Closeable {
         sync();
     }
 
-    public void loginSSO(URI baseURI, String email, char[] password, String code, String state, String codeVerifier, String redirectUri) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException  {
+    public void loginSSO(URI baseURI, char[] password, String code, String state, String codeVerifier, String redirectUri) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException, IOException  {
         this.baseURI = baseURI == null ? this.baseURI : baseURI;
         baseTarget = client.target(baseURI);
-
-        PreloginResult preloginResult = baseTarget
-                .path("identity/accounts/prelogin")
-                .request()
-                .post(Entity.json(new PreloginRequest(email)), PreloginResult.class);
-
-        this.preloginResult = preloginResult;
-        this.email = email;
-        byte[] masterKey = deriveMasterKey(password, email, preloginResult);
-        stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
-        masterPasswordHash = deriveMasterKeyHash(masterKey, password);
 
         TokenResult loginResponse = baseTarget
                 .path("identity/connect/token")
                 .request()
                 .header("Device-Type", 25)
                 .post(Entity.form(tokenRequestSSO(code, codeVerifier, redirectUri)), TokenResult.class);
+
+        PreloginResult preloginResult = baseTarget
+                .path("identity/accounts/prelogin")
+                .request()
+                .post(Entity.json(new PreloginRequest(email)), PreloginResult.class);
+        this.preloginResult = preloginResult;
+
+        String[] jwtParts = this.accessToken.split("\\.");
+        String header = jwtParts[0];
+        String payload = jwtParts[1];
+        String signature = jwtParts[2];
+
+        Map<String, Object> jwtData = objectMapper.readValue(Base64.getDecoder().decode(payload), new TypeReference<Map<String,Object>>() {});
+        this.email = (String) jwtData.get("email");
+
+        byte[] masterKey = deriveMasterKey(password, email, preloginResult);
+        stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
+        masterPasswordHash = deriveMasterKeyHash(masterKey, password);
+
+        syncData = baseTarget
+                .path("api/sync")
+                .queryParam("excludeDomains", "true")
+                .request()
+                .header("Authorization", "Bearer " + loginResponse.accessToken())
+                .get(SyncData.class);
+
+        userKey = decryptKey(stretchedMasterKey, syncData.profile().key());
 
         this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
         this.accessToken = loginResponse.accessToken();

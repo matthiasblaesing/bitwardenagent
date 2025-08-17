@@ -105,7 +105,11 @@ public class BitwardenMain {
             panel.add(passwordField, new GridBagConstraints(0, 5, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
             panel.add(new JLabel("Login-Type:"), new GridBagConstraints(0, 6, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
             panel.add(loginSelection, new GridBagConstraints(0, 7, 1, 1, 1, 0, GridBagConstraints.BASELINE_LEADING, 1, new Insets(5, 5, 5, 5), 0, 0));
+            loginSelection.addActionListener(ae -> {
+                emailField.setEnabled(loginSelection.getSelectedIndex() == 0);
+            });
             int result = JOptionPane.showConfirmDialog(null, panel, "Master Password", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+
 
             if (result != JOptionPane.OK_OPTION) {
                 return;
@@ -148,8 +152,8 @@ public class BitwardenMain {
 
                     Desktop.getDesktop().browse(uri);
 
-                    AtomicReference<String> codeInput = new AtomicReference<String>(null);
-                    AtomicReference<String> stateInput = new AtomicReference<String>(null);
+                    AtomicReference<String> codeInput = new AtomicReference<>(null);
+                    AtomicReference<String> stateInput = new AtomicReference<>(null);
                     CountDownLatch cdl = new CountDownLatch(1);
 
                     HttpServer server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
@@ -195,7 +199,7 @@ public class BitwardenMain {
 
                     server.stop(0);
 
-                    bwClient.loginSSO(baseUri, emailField.getText(), password, codeInput.get(), stateInput.get(), codeVerifier, redirectUri);
+                    bwClient.loginSSO(baseUri, password, codeInput.get(), stateInput.get(), codeVerifier, redirectUri);
 
                 }
             } catch (WebApplicationException ex) {

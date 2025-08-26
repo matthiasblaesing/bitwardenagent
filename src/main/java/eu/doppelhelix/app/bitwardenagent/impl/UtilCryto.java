@@ -15,7 +15,7 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
-import eu.doppelhelix.app.bitwardenagent.impl.http.PreloginResult;
+import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
@@ -234,15 +234,19 @@ public class UtilCryto {
         return encKey;
     }
 
-    public static String generateRandomString(int length) throws NoSuchAlgorithmException {
-        StringBuilder result = new StringBuilder(length);
-        String candidates = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        SecureRandom
-                .getInstanceStrong()
-                .ints(0, candidates.length())
-                .takeWhile(i -> result.length() < length)
-                .forEach(i -> result.append(candidates.charAt(i)));
-        return result.toString();
+    public static String generateRandomString(int length) {
+        try {
+            StringBuilder result = new StringBuilder(length);
+            String candidates = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            SecureRandom
+                    .getInstanceStrong()
+                    .ints(0, candidates.length())
+                    .takeWhile(i -> result.length() < length)
+                    .forEach(i -> result.append(candidates.charAt(i)));
+            return result.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public static String createCodeChallenge(String inputString) {

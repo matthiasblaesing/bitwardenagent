@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.doppelhelix.app.bitwardenagent.impl.http;
+package eu.doppelhelix.app.bitwardenagent.http;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.glassfish.jersey.client.innate.inject.NonInjectionManager;
+import org.glassfish.jersey.internal.inject.InjectionManager;
+import org.glassfish.jersey.internal.inject.InjectionManagerFactory;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-public record CipherData(
-        String id,
-        String name,
-        String organizationId,
-        LoginData login,
-        DataData data
-        ) {
+public class NonInjectionManagerFactory implements InjectionManagerFactory {
+
+    @Override
+    public InjectionManager create(Object o) {
+        return new NonInjectionManager();
+    }
 
 }

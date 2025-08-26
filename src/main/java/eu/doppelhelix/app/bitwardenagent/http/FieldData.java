@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.doppelhelix.app.bitwardenagent.impl.http;
+package eu.doppelhelix.app.bitwardenagent.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record UriData(
-        String uri,
-        String uriChecksum,
-        int match
+public record FieldData(
+        int type,
+        String name,
+        String value
         ) {
 
 }

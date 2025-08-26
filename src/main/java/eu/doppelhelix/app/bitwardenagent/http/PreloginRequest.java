@@ -13,17 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.doppelhelix.app.bitwardenagent.impl.http;
+package eu.doppelhelix.app.bitwardenagent.http;
 
-import org.glassfish.jersey.client.innate.inject.NonInjectionManager;
-import org.glassfish.jersey.internal.inject.InjectionManager;
-import org.glassfish.jersey.internal.inject.InjectionManagerFactory;
-
-public class NonInjectionManagerFactory implements InjectionManagerFactory {
-
-    @Override
-    public InjectionManager create(Object o) {
-        return new NonInjectionManager();
-    }
+public record PreloginRequest(String email) {
 
 }

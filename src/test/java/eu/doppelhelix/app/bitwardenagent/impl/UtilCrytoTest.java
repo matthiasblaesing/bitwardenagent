@@ -15,7 +15,7 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
-import eu.doppelhelix.app.bitwardenagent.impl.http.PreloginResult;
+import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
 import org.junit.jupiter.api.Test;
 
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptionKeyFromMasterKey;

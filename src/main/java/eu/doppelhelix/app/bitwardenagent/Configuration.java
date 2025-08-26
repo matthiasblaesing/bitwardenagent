@@ -15,8 +15,8 @@
  */
 package eu.doppelhelix.app.bitwardenagent;
 
-import eu.doppelhelix.app.bitwardenagent.impl.http.PreloginResult;
-import eu.doppelhelix.app.bitwardenagent.impl.http.SyncData;
+import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
+import eu.doppelhelix.app.bitwardenagent.http.SyncData;
 import java.net.URI;
 import java.util.UUID;
 

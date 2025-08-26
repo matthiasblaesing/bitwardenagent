@@ -13,16 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.doppelhelix.app.bitwardenagent.impl.http;
+package eu.doppelhelix.app.bitwardenagent.http;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record UserDecryptionOptions(
-        @JsonProperty("HasMasterPassword")
-        boolean hasMasterPassword,
-        @JsonProperty("object")
-        String Object) {
-
+public record PreloginResult(
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT)
+        KDF kdf,
+        int kdfIterations,
+        Integer kdfMemory,
+        Integer kdfParallelism
+        ) {
+    public enum KDF {
+        PBKDF2,
+        Argon2Id
+    }
 }

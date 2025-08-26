@@ -13,19 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.doppelhelix.app.bitwardenagent.impl.http;
+package eu.doppelhelix.app.bitwardenagent.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
+import java.net.URI;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record ProfileData(
-        String id,
-        String email,
-        String name,
-        String key,
-        String privateKey,
-        List<OrganzationData> organizations
+public record ConfigResponse(
+        String version,
+        String gitHash,
+        Environment environment
         ) {
 
+    public record Environment(
+            String cloudRegion,
+            URI vault,
+            URI api,
+            URI identity,
+            URI notifications,
+            URI sso
+            ) {
+
+    }
 }

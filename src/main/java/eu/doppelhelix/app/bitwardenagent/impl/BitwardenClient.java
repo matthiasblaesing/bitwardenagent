@@ -15,15 +15,14 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.doppelhelix.app.bitwardenagent.Configuration;
-import eu.doppelhelix.app.bitwardenagent.impl.http.CipherData;
-import eu.doppelhelix.app.bitwardenagent.impl.http.OrganzationData;
-import eu.doppelhelix.app.bitwardenagent.impl.http.PreloginRequest;
-import eu.doppelhelix.app.bitwardenagent.impl.http.PreloginResult;
-import eu.doppelhelix.app.bitwardenagent.impl.http.SyncData;
-import eu.doppelhelix.app.bitwardenagent.impl.http.TokenResult;
+import eu.doppelhelix.app.bitwardenagent.http.CipherData;
+import eu.doppelhelix.app.bitwardenagent.http.ConfigResponse;
+import eu.doppelhelix.app.bitwardenagent.http.OrganzationData;
+import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
+import eu.doppelhelix.app.bitwardenagent.http.SyncData;
+import eu.doppelhelix.app.bitwardenagent.http.TokenResult;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.client.WebTarget;
@@ -38,7 +37,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -72,7 +70,6 @@ public class BitwardenClient implements Closeable {
     private UUID deviceId = UUID.randomUUID();
     private String deviceName = "BitwardenAgent";
     private String email;
-    private String accessToken;
     private String refreshToken;
     private PreloginResult preloginResult;
     private URI baseURI = URI.create("https://vault.bitwarden.eu/");
@@ -150,82 +147,30 @@ public class BitwardenClient implements Closeable {
         }
     }
 
-    public void login(URI baseURI, String email, char[] password) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException  {
-        login(baseURI, email, password, null);
-    }
-
-    public void login(URI baseURI, String email, char[] password, String otp) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException  {
-        this.baseURI = baseURI == null ? this.baseURI : baseURI;
-        baseTarget = client.target(baseURI);
-
-        PreloginResult preloginResult = baseTarget
-                .path("identity/accounts/prelogin")
-                .request()
-                .post(Entity.json(new PreloginRequest(email)), PreloginResult.class);
-
+    void login(URI baseURI, String email, EncryptionKey stretchedMasterKey, String masterPasswordHash, String newRefreshToken, PreloginResult preloginResult) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
+        this.baseURI = baseURI;
+        this.baseTarget = client.target(baseURI);
         this.preloginResult = preloginResult;
         this.email = email;
-        byte[] masterKey = deriveMasterKey(password, email, preloginResult);
-        stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
-        masterPasswordHash = deriveMasterKeyHash(masterKey, password);
-
-        TokenResult loginResponse = baseTarget
-                .path("identity/connect/token")
-                .request()
-                .header("Device-Type", 25)
-                .post(Entity.form(tokenRequestPwd(otp)), TokenResult.class);
-
-        this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
-        this.accessToken = loginResponse.accessToken();
+        this.stretchedMasterKey = stretchedMasterKey;
+        this.masterPasswordHash = masterPasswordHash;
+        this.refreshToken = encryptString(stretchedMasterKey, newRefreshToken);
 
         store();
 
         sync();
     }
 
-    public void loginSSO(URI baseURI, char[] password, String code, String state, String codeVerifier, String redirectUri) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException, IOException  {
-        this.baseURI = baseURI == null ? this.baseURI : baseURI;
-        baseTarget = client.target(baseURI);
 
-        TokenResult loginResponse = baseTarget
+    TokenResult loginSSO(URI baseURI, String code, String codeVerifier, String redirectUri) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException, IOException  {
+        TokenResult loginResponse = client
+                .target(baseURI)
                 .path("identity/connect/token")
                 .request()
                 .header("Device-Type", 25)
                 .post(Entity.form(tokenRequestSSO(code, codeVerifier, redirectUri)), TokenResult.class);
 
-        PreloginResult preloginResult = baseTarget
-                .path("identity/accounts/prelogin")
-                .request()
-                .post(Entity.json(new PreloginRequest(email)), PreloginResult.class);
-        this.preloginResult = preloginResult;
-
-        String[] jwtParts = this.accessToken.split("\\.");
-        String header = jwtParts[0];
-        String payload = jwtParts[1];
-        String signature = jwtParts[2];
-
-        Map<String, Object> jwtData = objectMapper.readValue(Base64.getDecoder().decode(payload), new TypeReference<Map<String,Object>>() {});
-        this.email = (String) jwtData.get("email");
-
-        byte[] masterKey = deriveMasterKey(password, email, preloginResult);
-        stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
-        masterPasswordHash = deriveMasterKeyHash(masterKey, password);
-
-        syncData = baseTarget
-                .path("api/sync")
-                .queryParam("excludeDomains", "true")
-                .request()
-                .header("Authorization", "Bearer " + loginResponse.accessToken())
-                .get(SyncData.class);
-
-        userKey = decryptKey(stretchedMasterKey, syncData.profile().key());
-
-        this.refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
-        this.accessToken = loginResponse.accessToken();
-
-        store();
-
-        sync();
+        return loginResponse;
     }
 
     public void sync() throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
@@ -235,7 +180,7 @@ public class BitwardenClient implements Closeable {
                 .header("Device-Type", 25)
                 .post(Entity.form(tokenRequestToken(UtilCryto.decryptString(stretchedMasterKey, refreshToken))), TokenResult.class);
 
-        refreshToken = loginResponse.accessToken();
+        refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
 
         syncData = baseTarget
                 .path("api/sync")
@@ -290,7 +235,27 @@ public class BitwardenClient implements Closeable {
         client.close();
     }
 
-    private Form tokenRequestPwd(String newDeviceOtp) {
+    public BitwardenAuthenticator createAuthenticator() {
+        return new BitwardenAuthenticator(this);
+    }
+
+    Client getClient() {
+        return client;
+    }
+
+    public ConfigResponse getConfig(URI baseUri) {
+        return client
+                .target(baseUri)
+                .path("/api/config")
+                .request()
+                .get(ConfigResponse.class);
+    }
+
+    Form tokenRequestPwd(String newDeviceOtp) {
+        return tokenRequestPwd(email, masterPasswordHash, newDeviceOtp);
+    }
+
+    Form tokenRequestPwd(String emailInput, String masterPasswordHashInput, String newDeviceOtp) {
         Form form = new Form();
         form.param("scope", "api offline_access");
         form.param("client_id", "cli");
@@ -298,8 +263,8 @@ public class BitwardenClient implements Closeable {
         form.param("deviceIdentifier", deviceId.toString());
         form.param("deviceName", deviceName);
         form.param("grant_type", "password");
-        form.param("username", email);
-        form.param("password", masterPasswordHash);
+        form.param("username", emailInput);
+        form.param("password", masterPasswordHashInput);
         if (newDeviceOtp != null) {
             form.param("newDeviceOtp", newDeviceOtp);
         }

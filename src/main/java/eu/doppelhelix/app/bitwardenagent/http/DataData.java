@@ -13,17 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.doppelhelix.app.bitwardenagent.impl.http;
+package eu.doppelhelix.app.bitwardenagent.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record ErrorModel(
-        @JsonProperty("Message")
-        String message,
-        @JsonProperty("Object")
-        String object
+public record DataData(
+        String uri,
+        String username,
+        String password,
+        String totp,
+        List<UriData> uris,
+        List<FieldData> fields
         ) {
 
 }

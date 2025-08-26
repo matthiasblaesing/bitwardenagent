@@ -2,30 +2,31 @@
 
 hide empty description
 
+state Finished
+
 state Authenicating {
     state MethodSelection
 
 MethodSelection --> WaitingForSsoReply : SSO
 MethodSelection --> EmailMasterPass
-EmailMasterPass --> [*] : Set Token\n(Success)
+EmailMasterPass --> Finished : Set Token\n(Success)
 EmailMasterPass --> Select2FA : TwoFactorProviders\npresent
 Select2FA --> EmailOTP : Request-Email
 Select2FA --> TOTPInput : TOTP
-TOTPInput --> [*] : Set Token\n(Success)
-EmailOTP --> [*] : Set Token\n(Success)
+TOTPInput --> Finished : Set Token\n(Success)
+EmailOTP --> Finished : Set Token\n(Success)
 EmailMasterPass --> QueryOTP : Device Error
-QueryOTP --> [*] : Set Token\n(Success)
+QueryOTP --> Finished : Set Token\n(Success)
 WaitingForSsoReply --> SsoTokenExchange : Receive Token
-SsoTokenExchange --> QueryMasterPassword : Set Token
-QueryMasterPassword --> [*] : Set Token
+SsoTokenExchange --> QueryMasterPassword : Set Token\n(Success)
+QueryMasterPassword --> Finished : Set Token\n(Success)
 
 
 note left of MethodSelection : Server Selector
 }
 
 [*] --> MethodSelection
-Authenicating --> [*] : Cancel
-
+Authenicating --> Finished : Cancel
 
 
 

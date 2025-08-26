@@ -51,7 +51,6 @@ import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -61,7 +60,6 @@ import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenAuthenticator.Stat
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.createCodeChallenge;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.deriveMasterKey;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.deriveMasterKeyHash;
-import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptString;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptionKeyFromMasterKey;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.generateRandomString;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -71,14 +69,14 @@ public class BitwardenAuthenticator {
     public enum State {
         MethodSelection,
         WaitingForSsoReply,
-        SsoTokenExchange,
         QueryMasterPassword,
         EmailMasterPass,
         Select2FA,
         EmailOTP,
         TOTPInput,
         QueryOTP,
-        Finished
+        Finished,
+        Canceled
     }
 
     public interface StateObserver {
@@ -96,9 +94,7 @@ public class BitwardenAuthenticator {
     private EncryptionKey stretchedMasterKey;
     private String masterPasswordHash;
     private PreloginResult preloginResult;
-    private String authStateString;
-    private String authStateCodeVerifier;
-    private String redirectUri;
+    private TokenResult loginResponse;
 
     public URI getBaseURI() {
         return baseURI;
@@ -137,7 +133,9 @@ public class BitwardenAuthenticator {
         try {
             AtomicReference<String> codeInput = new AtomicReference<>(null);
             AtomicReference<String> stateInput = new AtomicReference<>(null);
-            CountDownLatch cdl = new CountDownLatch(1);
+            AtomicReference<String> redirectUri = new AtomicReference<>(null);
+            String authState = generateRandomString(64);
+            String codeVerifier = generateRandomString(64);
 
             HttpServer httpServerBuilder = HttpServer.create();
             HttpContext ctx = httpServerBuilder.createContext("/");
@@ -165,9 +163,10 @@ public class BitwardenAuthenticator {
                                 stateInput.set(value);
                         }
                     }
-                    if (codeInput.get() != null && state != null && state.equals(authStateString)) {
+                    // State is modified by Bitwarden server
+                    if (codeInput.get() != null && stateInput.get() != null && stateInput.get().startsWith(authState)) {
                         try {
-                            client.loginSSO(baseURI, codeInput.get(), authStateCodeVerifier, redirectUri);
+                            loginResponse = client.loginSSO(baseURI, codeInput.get(), codeVerifier, redirectUri.get());
                         } catch (Exception ex) {
                             LOG.log(Level.ERROR, (String) null, ex);
                         }
@@ -181,17 +180,17 @@ public class BitwardenAuthenticator {
                         os.write("You can close the windows now".getBytes(UTF_8));
                     }
                     if (codeInput.get() != null && stateInput.get() != null) {
-                        cdl.countDown();
+                        httpServerBuilder.stop(0);
                     }
+                    setState(QueryMasterPassword);
                 }
             });
 
             URI returnUri = null;
-            String authStateStringBuilder = generateRandomString(64);
-            String authStateCodeVerifierBuilder = generateRandomString(64);
             String redirectUriBuilder = null;
 
-            for (int port = 8001; port < 9000; port++) {
+            // Server rejects requests from ports below 8065
+            for (int port = 8065; port < 9000; port++) {
                 try {
                     httpServerBuilder.bind(new InetSocketAddress("localhost", port), 0);
 
@@ -205,7 +204,7 @@ public class BitwardenAuthenticator {
                             "/",
                             null,
                             String.format("/sso?clientId=cli&redirectUri=%s&state=%s&codeChallenge=%s",
-                                    redirectUriBuilder, authStateStringBuilder, createCodeChallenge(authStateCodeVerifierBuilder))
+                                    redirectUriBuilder, authState, createCodeChallenge(codeVerifier))
                     );
 
                     break;
@@ -222,9 +221,7 @@ public class BitwardenAuthenticator {
 
             httpServer = httpServerBuilder;
             baseURI = newBaseUri;
-            authStateString = authStateStringBuilder;
-            authStateCodeVerifier = authStateCodeVerifierBuilder;
-            redirectUri = redirectUriBuilder;
+            redirectUri.set(redirectUriBuilder);
 
             setState(WaitingForSsoReply);
 
@@ -276,7 +273,7 @@ public class BitwardenAuthenticator {
         setState(Finished);
     }
 
-    public void setMasterPass(char[] password) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
+    public void setEmailMasterPassSSO(String email, char[] password) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
         WebTarget baseTarget = client.getClient().target(baseURI);
 
         PreloginResult preloginResultBuilder = baseTarget
@@ -287,12 +284,6 @@ public class BitwardenAuthenticator {
         byte[] masterKeyBuilder = deriveMasterKey(password, email, preloginResultBuilder);
         EncryptionKey stretchedMasterKeyBuilder = encryptionKeyFromMasterKey(masterKeyBuilder);
         String masterPasswordHashBuilder = deriveMasterKeyHash(masterKeyBuilder, password);
-
-        TokenResult loginResponse = baseTarget
-                .path("identity/connect/token")
-                .request()
-                .header("Device-Type", 25)
-                .post(Entity.form(client.tokenRequestPwd(email, masterPasswordHashBuilder, null)), TokenResult.class);
 
         client.login(baseURI, email, stretchedMasterKeyBuilder, masterPasswordHashBuilder, loginResponse.refreshToken(), preloginResultBuilder);
 
@@ -314,16 +305,16 @@ public class BitwardenAuthenticator {
     }
 
     public void cancel() {
-        if (state == WaitingForSsoReply) {
-            try {
-                httpServer.stop(0);
-                authStateString = null;
-                authStateCodeVerifier = null;
-            } catch (Exception ex) {
-                LOG.log(Level.WARNING, "Failed to cancel", ex);
-            }
-        }
-        setState(Finished);
+        setState(Canceled);
+    }
+
+    public void reset() {
+        this.email = null;
+        this.stretchedMasterKey = null;
+        this.masterPasswordHash = null;
+        this.preloginResult = null;
+        this.loginResponse = null;
+        setState(MethodSelection);
     }
 
     public State getState() {
@@ -341,9 +332,11 @@ public class BitwardenAuthenticator {
 
     private static final Map<State, Set<State>> ALLOWED_TRANSITIONS = Map.of(
             MethodSelection, EnumSet.of(WaitingForSsoReply, EmailMasterPass),
-            WaitingForSsoReply, EnumSet.of(MethodSelection, SsoTokenExchange),
-            SsoTokenExchange, EnumSet.of(QueryMasterPassword),
-            EmailMasterPass, EnumSet.of(QueryOTP)
+            WaitingForSsoReply, EnumSet.of(MethodSelection, QueryMasterPassword),
+            EmailMasterPass, EnumSet.of(QueryOTP, Finished),
+            QueryMasterPassword, EnumSet.of(Finished),
+            QueryOTP, EnumSet.of(Finished),
+            Canceled, EnumSet.of(MethodSelection)
     );
 
     private void setState(State newState) {
@@ -353,9 +346,24 @@ public class BitwardenAuthenticator {
         boolean allowedTransition = ALLOWED_TRANSITIONS
                 .getOrDefault(state, EnumSet.noneOf(State.class))
                 .contains(newState);
-        if (newState != Finished && !allowedTransition) {
+        if (newState != Canceled && !allowedTransition) {
             throw new IllegalStateException(String.format("Transition not allowed: %s -> %s", state, newState));
         }
+
+        if (newState != WaitingForSsoReply && httpServer != null) {
+            try {
+                HttpServer localHttpServer = httpServer;
+                httpServer = null;
+                localHttpServer.stop(0);
+            } catch (Exception ex) {
+                LOG.log(Level.WARNING, "Failed to cancel", ex);
+            }
+        }
+
+        if (newState == Finished) {
+
+        }
+
         State oldState = state;
         state = newState;
         stateObserver.forEach(so -> so.stateChanged(oldState, newState));

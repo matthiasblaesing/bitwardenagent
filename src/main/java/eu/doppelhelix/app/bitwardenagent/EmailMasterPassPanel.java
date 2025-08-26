@@ -30,12 +30,14 @@ public class EmailMasterPassPanel extends javax.swing.JPanel {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("eu/doppelhelix/app/bitwardenagent/Bundle");
 
     private final BitwardenAuthenticator authenticator;
+    private final boolean ssoVariant;
 
     /**
      * Creates new form MethodSelectionPanel
      */
-    public EmailMasterPassPanel(BitwardenAuthenticator authenticator) {
+    public EmailMasterPassPanel(BitwardenAuthenticator authenticator, boolean ssoVariant) {
         this.authenticator = authenticator;
+        this.ssoVariant = ssoVariant;
         initComponents();
         emailInput.addActionListener(ae -> {
             if(emailInput.isEnabled()) {
@@ -54,6 +56,7 @@ public class EmailMasterPassPanel extends javax.swing.JPanel {
                     () -> authenticator.cancel(),
                     () -> enableInputs(true),
                     (exception) -> {
+                        enableInputs(true);
                         setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
                         LOG.log(Level.WARNING, "Failed to cancel", exception);
                     }
@@ -67,15 +70,20 @@ public class EmailMasterPassPanel extends javax.swing.JPanel {
             UtilUI.runOffTheEdt(
                     () -> {
                         try {
-                            authenticator.setEmailMasterPass(email, password);
+                            if (ssoVariant) {
+                                authenticator.setEmailMasterPassSSO(email, password);
+                            } else {
+                                authenticator.setEmailMasterPass(email, password);
+                            }
                         } finally {
                             Arrays.fill(password, '\0');
                         }
                     },
                     () -> enableInputs(true),
                     (exception) -> {
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
-                        LOG.log(Level.WARNING, "Failed to cancel", exception);
+                        enableInputs(true);
+                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedSetMasterPass")));
+                        LOG.log(Level.WARNING, "Failed to set master password", exception);
                     }
             );
         });

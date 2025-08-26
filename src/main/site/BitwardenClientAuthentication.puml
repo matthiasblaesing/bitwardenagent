@@ -26,7 +26,8 @@ note left of MethodSelection : Server Selector
 }
 
 [*] --> MethodSelection
-Authenicating --> Finished : Cancel
+Authenicating --> Canceled : Cancel
+Canceled -left-> MethodSelection: Reset
 
 
 

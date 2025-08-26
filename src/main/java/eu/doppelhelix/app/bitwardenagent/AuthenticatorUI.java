@@ -42,9 +42,11 @@ public class AuthenticatorUI extends JPanel {
             case WaitingForSsoReply ->
                 this.add(new WaitingForSsoReplyPanel(authenticator), BorderLayout.CENTER);
             case EmailMasterPass ->
-                this.add(new EmailMasterPassPanel(authenticator), BorderLayout.CENTER);
+                this.add(new EmailMasterPassPanel(authenticator, false), BorderLayout.CENTER);
             case QueryOTP ->
                 this.add(new OTPPanel(authenticator), BorderLayout.CENTER);
+            case QueryMasterPassword ->
+                this.add(new EmailMasterPassPanel(authenticator, true), BorderLayout.CENTER);
         }
         SwingUtilities.invokeLater(() -> {
             revalidate();

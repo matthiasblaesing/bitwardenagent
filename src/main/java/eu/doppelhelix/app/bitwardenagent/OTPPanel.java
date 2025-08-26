@@ -49,6 +49,7 @@ public class OTPPanel extends javax.swing.JPanel {
                     () -> authenticator.cancel(),
                     () -> enableInputs(true),
                     (exception) -> {
+                        enableInputs(true);
                         setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
                         LOG.log(Level.WARNING, "Failed to cancel", exception);
                     }
@@ -62,8 +63,9 @@ public class OTPPanel extends javax.swing.JPanel {
                     () -> authenticator.setDeviceOTP(verificationCode),
                     () -> enableInputs(true),
                     (exception) -> {
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
-                        LOG.log(Level.WARNING, "Failed to cancel", exception);
+                        enableInputs(true);
+                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedSetVerificationCode")));
+                        LOG.log(Level.WARNING, "Failed to set verification code", exception);
                     }
             );
         });

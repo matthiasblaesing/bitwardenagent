@@ -86,6 +86,8 @@ public class BitwardenMain {
                             (ex) -> { ex.printStackTrace(); System.exit(1); }
                     );
                     frame.setVisible(false);
+                } else if (newState == BitwardenAuthenticator.State.Canceled) {
+                    authenticator.reset();
                 }
             });
         });

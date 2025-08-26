@@ -17,6 +17,8 @@ package eu.doppelhelix.app.bitwardenagent;
 
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenAuthenticator;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
+import java.awt.Desktop;
+import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.URI;
@@ -47,7 +49,8 @@ public class MethodSelectionPanel extends javax.swing.JPanel {
                 }
             }
             if (!existingUriFound) {
-                uriInput.addItem(uriString);
+                uriInput.insertItemAt(uriString, 0);
+                uriInput.setSelectedIndex(0);
             }
         }
         cancelButton.addActionListener((ae) -> {
@@ -57,6 +60,7 @@ public class MethodSelectionPanel extends javax.swing.JPanel {
                     () -> authenticator.cancel(),
                     () -> enableInputs(true),
                     (exception) -> {
+                        enableInputs(true);
                         setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
                         LOG.log(Level.WARNING, "Failed to cancel", exception);
                     }
@@ -66,8 +70,15 @@ public class MethodSelectionPanel extends javax.swing.JPanel {
             validateUriAndRunIfOk((uri) -> {
                 UtilUI.runOffTheEdt(
                     () -> authenticator.startSso(uri),
-                    () -> enableInputs(true),
+                    (redirectUri) -> {
+                        try {
+                            Desktop.getDesktop().browse(redirectUri);
+                        } catch (IOException ex) {
+                            
+                        }
+                        enableInputs(true);},
                     (exception) -> {
+                        enableInputs(true);
                         setWarnings(List.of(RESOURCE_BUNDLE.getString("failedStartSSO")));
                         LOG.log(Level.WARNING, "Failed to start SSO", exception);
                     }
@@ -80,6 +91,7 @@ public class MethodSelectionPanel extends javax.swing.JPanel {
                         () -> authenticator.startLogin(uri),
                         () -> enableInputs(true),
                         (exception) -> {
+                            enableInputs(true);
                             setWarnings(List.of(RESOURCE_BUNDLE.getString("failedStartLogin")));
                             LOG.log(Level.WARNING, "Failed to start Login", exception);
                         }

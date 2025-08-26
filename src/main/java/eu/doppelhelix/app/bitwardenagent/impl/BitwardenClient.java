@@ -251,10 +251,6 @@ public class BitwardenClient implements Closeable {
                 .get(ConfigResponse.class);
     }
 
-    Form tokenRequestPwd(String newDeviceOtp) {
-        return tokenRequestPwd(email, masterPasswordHash, newDeviceOtp);
-    }
-
     Form tokenRequestPwd(String emailInput, String masterPasswordHashInput, String newDeviceOtp) {
         Form form = new Form();
         form.param("scope", "api offline_access");

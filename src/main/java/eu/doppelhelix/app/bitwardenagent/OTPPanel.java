@@ -162,6 +162,7 @@ public class OTPPanel extends javax.swing.JPanel {
         warningTextPane.setContentType("text/html"); // NOI18N
         warningTextPane.setAlignmentX(0.0F);
         warningTextPane.setAlignmentY(0.0F);
+        warningTextPane.setFocusable(false);
         warningTextPane.setName(""); // NOI18N
         warningScrollPane.setViewportView(warningTextPane);
 

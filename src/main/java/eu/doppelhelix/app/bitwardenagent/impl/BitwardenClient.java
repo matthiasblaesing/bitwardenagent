@@ -23,6 +23,8 @@ import eu.doppelhelix.app.bitwardenagent.http.OrganzationData;
 import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
 import eu.doppelhelix.app.bitwardenagent.http.SyncData;
 import eu.doppelhelix.app.bitwardenagent.http.TokenResult;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.client.WebTarget;
@@ -32,28 +34,32 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
-import java.security.spec.InvalidKeySpecException;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.glassfish.jersey.logging.LoggingFeature;
 
+import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Initial;
+import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.LocalStatePresent;
+import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Offline;
+import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Started;
+import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Syncable;
+import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Syncing;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.decryptKey;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.decryptPrivateKey;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.deriveMasterKey;
-import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.deriveMasterKeyHash;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptString;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptionKeyFromMasterKey;
 
@@ -64,7 +70,21 @@ import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptionKeyFrom
 // https://github.com/bitwarden/clients/blob/f55f315ca15df09772e957e0e8b089a2d45b04f7/libs/common/src/platform/models/domain/symmetric-crypto-key.ts#L53
 public class BitwardenClient implements Closeable {
 
+    public enum State {
+        Started,
+        LocalStatePresent,
+        Initial,
+        Offline,
+        Syncable,
+        Syncing
+    }
+
+    public interface StateObserver {
+        public void stateChanged(State oldState, State newState);
+    }
+
     private final static ObjectMapper objectMapper = new ObjectMapper();
+    private final List<StateObserver> stateObserver = new CopyOnWriteArrayList<>();
     private final Client client;
     private final Path configPath;
     private UUID deviceId = UUID.randomUUID();
@@ -73,19 +93,18 @@ public class BitwardenClient implements Closeable {
     private String refreshToken;
     private PreloginResult preloginResult;
     private URI baseURI = URI.create("https://vault.bitwarden.eu/");
-    private WebTarget baseTarget;
     private EncryptionKey stretchedMasterKey;
-    private String masterPasswordHash;
     private EncryptionKey userKey;
     private PrivateKey userPrivateKey;
     private Map<String, EncryptionKey> organizationKeys;
     private SyncData syncData;
+    private State state = State.Started;
 
     public BitwardenClient() {
         client = JerseyClientBuilder.newBuilder()
                 .connectTimeout(2, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
-                .register(new LoggingFeature(Logger.getLogger(BitwardenClient.class.getName()), Level.FINEST, LoggingFeature.Verbosity.PAYLOAD_ANY, 65535))
+                .register(new LoggingFeature(Logger.getLogger(BitwardenClient.class.getName()), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY, 65535))
                 .build();
         configPath = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
                 ? Path.of(System.getenv("LOCALAPPDATA"), "BitwardenAgent", "config.json")
@@ -95,13 +114,20 @@ public class BitwardenClient implements Closeable {
                 Configuration config = objectMapper.readValue(configPath.toFile(), Configuration.class);
                 email = config.getEmail();
                 baseURI = config.getBaseUri() != null ? config.getBaseUri() : this.baseURI;
-                deviceId = config.getClientId();
+                if(config.getClientId() != null) {
+                    deviceId = config.getClientId();
+                }
                 refreshToken = config.getRefreshToken();
                 syncData = config.getSyncData();
                 preloginResult = config.getPreloginResult();
             } catch (IOException ex) {
                 System.getLogger(BitwardenClient.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
+        }
+        if(email != null && baseURI != null && preloginResult != null && syncData != null) {
+            setState(State.LocalStatePresent);
+        } else {
+            setState(State.Initial);
         }
     }
 
@@ -121,20 +147,9 @@ public class BitwardenClient implements Closeable {
         return email;
     }
 
-    public boolean isNeedsUnlocking() {
-        return this.refreshToken != null && this.preloginResult != null && this.stretchedMasterKey == null;
-    }
-
-    public boolean isAuthenticated() {
-        return this.refreshToken != null && this.preloginResult != null && this.stretchedMasterKey != null;
-    }
-
-    public void unlock(char[] password) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
-        baseTarget = client.target(baseURI);
-
+    public void unlock(char[] password) throws GeneralSecurityException {
         byte[] masterKey = deriveMasterKey(password, email, this.preloginResult);
         stretchedMasterKey = encryptionKeyFromMasterKey(masterKey);
-        masterPasswordHash = deriveMasterKeyHash(masterKey, password);
 
         if (syncData != null) {
             userKey = decryptKey(stretchedMasterKey, syncData.profile().key());
@@ -145,24 +160,30 @@ public class BitwardenClient implements Closeable {
             }
             organizationKeys = organizationKeysBuilder;
         }
+
+        setState(Offline);
+
+        if(refreshToken != null) {
+            setState(Syncable);
+        }
     }
 
-    void login(URI baseURI, String email, EncryptionKey stretchedMasterKey, String masterPasswordHash, String newRefreshToken, PreloginResult preloginResult) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
+    void login(URI baseURI, String email, EncryptionKey stretchedMasterKey, String masterPasswordHash, String newRefreshToken, PreloginResult preloginResult) throws GeneralSecurityException {
         this.baseURI = baseURI;
-        this.baseTarget = client.target(baseURI);
         this.preloginResult = preloginResult;
         this.email = email;
         this.stretchedMasterKey = stretchedMasterKey;
-        this.masterPasswordHash = masterPasswordHash;
         this.refreshToken = encryptString(stretchedMasterKey, newRefreshToken);
 
         store();
+
+        setState(Syncable);
 
         sync();
     }
 
 
-    TokenResult loginSSO(URI baseURI, String code, String codeVerifier, String redirectUri) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException, IOException  {
+    TokenResult loginSSO(URI baseURI, String code, String codeVerifier, String redirectUri) throws GeneralSecurityException, IllegalStateException, IOException  {
         TokenResult loginResponse = client
                 .target(baseURI)
                 .path("identity/connect/token")
@@ -173,38 +194,50 @@ public class BitwardenClient implements Closeable {
         return loginResponse;
     }
 
-    public void sync() throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
-        TokenResult loginResponse = baseTarget
-                .path("identity/connect/token")
-                .request()
-                .header("Device-Type", 25)
-                .post(Entity.form(tokenRequestToken(UtilCryto.decryptString(stretchedMasterKey, refreshToken))), TokenResult.class);
+    public void sync() throws GeneralSecurityException {
+        setState(Syncing);
 
-        refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
+        try {
+            WebTarget baseTarget = client.target(baseURI);
+            TokenResult loginResponse = baseTarget
+                    .path("identity/connect/token")
+                    .request()
+                    .header("Device-Type", 25)
+                    .post(Entity.form(tokenRequestToken(UtilCryto.decryptString(stretchedMasterKey, refreshToken))), TokenResult.class);
 
-        syncData = baseTarget
-                .path("api/sync")
-                .queryParam("excludeDomains", "true")
-                .request()
-                .header("Authorization", "Bearer " + loginResponse.accessToken())
-                .get(SyncData.class);
+            refreshToken = encryptString(stretchedMasterKey, loginResponse.refreshToken());
 
-        userKey = decryptKey(stretchedMasterKey, syncData.profile().key());
-        userPrivateKey = decryptPrivateKey(userKey, syncData.profile().privateKey());
-        Map<String, EncryptionKey> organizationKeysBuilder = new HashMap<>();
-        for (OrganzationData od : syncData.profile().organizations()) {
-            organizationKeysBuilder.put(od.id(), decryptKey(userPrivateKey, od.key()));
+            syncData = baseTarget
+                    .path("api/sync")
+                    .queryParam("excludeDomains", "true")
+                    .request()
+                    .header("Authorization", "Bearer " + loginResponse.accessToken())
+                    .header("Bitwarden-Client-Version", "2025.08.0")
+                    .get(SyncData.class);
+
+            userKey = decryptKey(stretchedMasterKey, syncData.profile().key());
+            userPrivateKey = decryptPrivateKey(userKey, syncData.profile().privateKey());
+            Map<String, EncryptionKey> organizationKeysBuilder = new HashMap<>();
+            for (OrganzationData od : syncData.profile().organizations()) {
+                organizationKeysBuilder.put(od.id(), decryptKey(userPrivateKey, od.key()));
+            }
+            organizationKeys = organizationKeysBuilder;
+
+            store();
+
+            setState(Syncable);
+        } catch (NotAuthorizedException | ForbiddenException ex) {
+            setState(Offline);
+        } catch (Exception ex) {
+            setState(Syncable);
         }
-        organizationKeys = organizationKeysBuilder;
-
-        store();
     }
 
     public SyncData getSyncData() {
         return syncData;
     }
 
-    public String decryptString(CipherData cd, String encryptedString) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException {
+    public String decryptString(CipherData cd, String encryptedString) throws GeneralSecurityException {
         EncryptionKey ek;
         if (cd.organizationId() == null) {
             ek = userKey;
@@ -235,6 +268,19 @@ public class BitwardenClient implements Closeable {
         client.close();
     }
 
+    public void clear() {
+        this.email = null;
+        this.refreshToken = null;
+        this.preloginResult = null;
+        this.stretchedMasterKey = null;
+        this.userKey = null;
+        this.userPrivateKey = null;
+        this.organizationKeys = null;
+        this.syncData = null;
+        store();
+        setState(Initial);
+    }
+
     public BitwardenAuthenticator createAuthenticator() {
         return new BitwardenAuthenticator(this);
     }
@@ -249,6 +295,45 @@ public class BitwardenClient implements Closeable {
                 .path("/api/config")
                 .request()
                 .get(ConfigResponse.class);
+    }
+
+
+    public State getState() {
+        return state;
+    }
+
+    public void addStateObserver(StateObserver so) {
+        Objects.requireNonNull(so);
+        stateObserver.add(so);
+    }
+
+    public void removeStateObserver(StateObserver so) {
+        stateObserver.remove(so);
+    }
+
+    private static final Map<State, Set<State>> ALLOWED_TRANSITIONS = Map.of(
+            Started, EnumSet.of(Initial, LocalStatePresent),
+            LocalStatePresent, EnumSet.of(Initial, Offline),
+            Initial, EnumSet.of(Syncable),
+            Offline, EnumSet.of(Syncable),
+            Syncable, EnumSet.of(Syncing),
+            Syncing, EnumSet.of(Syncable, Offline)
+    );
+
+    private void setState(State newState) {
+        if(newState == state) {
+            return;
+        }
+        boolean allowedTransition = ALLOWED_TRANSITIONS
+                .getOrDefault(state, EnumSet.noneOf(State.class))
+                .contains(newState);
+        if (!allowedTransition) {
+            throw new IllegalStateException(String.format("Transition not allowed: %s -> %s", state, newState));
+        }
+
+        State oldState = state;
+        state = newState;
+        stateObserver.forEach(so -> so.stateChanged(oldState, newState));
     }
 
     Form tokenRequestPwd(String emailInput, String masterPasswordHashInput, String newDeviceOtp) {

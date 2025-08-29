@@ -16,11 +16,12 @@
 package eu.doppelhelix.app.bitwardenagent;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import eu.doppelhelix.app.bitwardenagent.http.FieldData;
-import eu.doppelhelix.app.bitwardenagent.impl.BitwardenAuthenticator;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
-import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.BorderLayout;
+import java.awt.datatransfer.Clipboard;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
@@ -36,60 +37,26 @@ public class BitwardenMain {
         Logger log = Logger.getLogger(BitwardenClient.class.getName());
         log.setLevel(Level.FINEST);
 
-//        for (Handler h : Logger.getLogger("").getHandlers()) {
-//            h.setLevel(Level.ALL);
-//        }
-
-        FlatLightLaf.setup();
+        for (Handler h : Logger.getLogger("").getHandlers()) {
+            h.setLevel(Level.ALL);
+        }
 
         BitwardenClient bwClient = new BitwardenClient();
 
         SwingUtilities.invokeLater(() -> {
-            BitwardenAuthenticator authenticator = bwClient.createAuthenticator();
-            AuthenticatorUI ui = new AuthenticatorUI(authenticator);
-            JFrame frame = new JFrame("Bitwarden Login");
-            frame.setLayout(new BorderLayout());
-            frame.add(ui, BorderLayout.CENTER);
-            frame.setSize(450, 450);
-            frame.setLocationByPlatform(true);
-            frame.setVisible(true);
-            authenticator.addStateObserver((oldState, newState) -> {
-                if (newState == BitwardenAuthenticator.State.Finished) {
-                    UtilUI.runOffTheEdt(
-                            () -> {
-                                bwClient.sync();
-                                bwClient.getSyncData().ciphers()
-                                        .stream()
-                                        .forEach(cd -> {
-                                            try {
-                                                System.out.printf("%s (ID: %s)%n", bwClient.decryptString(cd, cd.name()), cd.id());
-                                                System.out.printf("\tUsername: %s%n", bwClient.decryptString(cd, cd.login().username()));
-                                                System.out.printf("\tPassword: %s%n", bwClient.decryptString(cd, cd.login().password()));
-                                                System.out.printf("\tTOTP:     %s%n", bwClient.decryptString(cd, cd.login().totp()));
-                                                System.out.printf("\tFields:%n");
-                                                if (cd.data() != null && cd.data().fields() != null && !cd.data().fields().isEmpty()) {
-                                                    for (FieldData fd : cd.data().fields()) {
-                                                        System.out.printf("\t\t%s: %s%n",
-                                                                bwClient.decryptString(cd, fd.name()),
-                                                                bwClient.decryptString(cd, fd.value())
-                                                        );
-                                                    }
-                                                } else {
-                                                    System.out.printf("\t\t-%n");
-                                                }
-                                            } catch (Exception ex) {
-                                                System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-                                            }
-                                        });
-                            },
-                            () -> System.exit(0),
-                            (ex) -> { ex.printStackTrace(); System.exit(1); }
-                    );
-                    frame.setVisible(false);
-                } else if (newState == BitwardenAuthenticator.State.Canceled) {
-                    authenticator.reset();
+            FlatLightLaf.setup();
+            JFrame frame = new JFrame("BitwardenAgent");
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    System.exit(0);
                 }
             });
+            frame.setLayout(new BorderLayout());
+            frame.add(new BitwardenMainPanel(bwClient), BorderLayout.CENTER);
+            frame.setSize(800, 600);
+            frame.setLocationByPlatform(true);
+            frame.setVisible(true);
         });
 
     }

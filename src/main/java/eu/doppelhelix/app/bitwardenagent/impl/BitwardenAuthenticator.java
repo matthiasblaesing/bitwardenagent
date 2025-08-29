@@ -38,6 +38,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -232,7 +233,7 @@ public class BitwardenAuthenticator {
         }
     }
 
-    public void setEmailMasterPass(String emailInput, char[] password) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
+    public void setEmailMasterPass(String emailInput, char[] password) throws GeneralSecurityException, IllegalStateException {
         WebTarget baseTarget = client.getClient().target(baseURI);
 
         PreloginResult preloginResultBuilder = baseTarget
@@ -273,7 +274,7 @@ public class BitwardenAuthenticator {
         setState(Finished);
     }
 
-    public void setEmailMasterPassSSO(String email, char[] password) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
+    public void setEmailMasterPassSSO(String email, char[] password) throws GeneralSecurityException, IllegalStateException {
         WebTarget baseTarget = client.getClient().target(baseURI);
 
         PreloginResult preloginResultBuilder = baseTarget
@@ -290,7 +291,7 @@ public class BitwardenAuthenticator {
         setState(Finished);
     }
 
-    public void setDeviceOTP(String otp) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, NoSuchPaddingException, IllegalStateException, InvalidKeySpecException {
+    public void setDeviceOTP(String otp) throws GeneralSecurityException {
         WebTarget baseTarget = client.getClient().target(baseURI);
 
         TokenResult loginResponse = baseTarget
@@ -367,9 +368,5 @@ public class BitwardenAuthenticator {
         State oldState = state;
         state = newState;
         stateObserver.forEach(so -> so.stateChanged(oldState, newState));
-    }
-
-    public record MasterPassResult (boolean ok, boolean deviceOtpRequired) {
-
     }
 }

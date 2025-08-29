@@ -19,9 +19,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record FieldData(
-        int type,
+        FieldType type,
         String name,
-        String value
+        String value,
+        LinkedId linkedId
         ) {
 
 }

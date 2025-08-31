@@ -18,10 +18,10 @@ package eu.doppelhelix.app.bitwardenagent.http;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record OrganzationData(
-        String id,
-        String key,
-        String name
+public record SshKey(
+        String privateKey,
+        String publicKey,
+        String keyFingerPrint
         ) {
 
 }

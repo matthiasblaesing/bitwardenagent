@@ -16,13 +16,16 @@
 package eu.doppelhelix.app.bitwardenagent.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.doppelhelix.app.bitwardenagent.BitwardenMain;
 import eu.doppelhelix.app.bitwardenagent.Configuration;
 import eu.doppelhelix.app.bitwardenagent.http.CipherData;
 import eu.doppelhelix.app.bitwardenagent.http.ConfigResponse;
+import eu.doppelhelix.app.bitwardenagent.http.FieldData;
 import eu.doppelhelix.app.bitwardenagent.http.OrganzationData;
 import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
 import eu.doppelhelix.app.bitwardenagent.http.SyncData;
 import eu.doppelhelix.app.bitwardenagent.http.TokenResult;
+import eu.doppelhelix.app.bitwardenagent.http.UriData;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.client.Client;
@@ -233,11 +236,78 @@ public class BitwardenClient implements Closeable {
         }
     }
 
-    public SyncData getSyncData() {
-        return syncData;
+    public DecryptedSyncData getSyncData() {
+        EncryptionKey localUserKey = userKey;
+        Map<String, EncryptionKey> localOrganizationKeys = new HashMap<>(this.organizationKeys);
+        SyncData localSyncData = syncData;
+        if (localSyncData == null) {
+            return null;
+        }
+        DecryptedSyncData result = new DecryptedSyncData();
+        result.setId(localSyncData.profile().id());
+        result.setEmail(localSyncData.profile().email());
+        result.setName(localSyncData.profile().name());
+        localSyncData.profile().organizations().forEach(od -> {
+            result.getOrganizationNames().put(od.id(), od.name());
+        });
+        localSyncData.ciphers()
+                .stream()
+                .forEach(cd -> {
+                    try {
+                        DecryptedCipherData dcd = new DecryptedCipherData();
+                        dcd.setName(decryptString(localUserKey, localOrganizationKeys, cd, cd.name()));
+                        dcd.setId(cd.id());
+                        dcd.setOrganizationId(cd.organizationId());
+                        if(cd.organizationId() != null) {
+                            dcd.setOrganization(result.getOrganizationNames().get(cd.organizationId()));
+                        }
+                        if (cd.login() != null) {
+                            DecryptedLoginData dld = new DecryptedLoginData();
+                            dld.setPassword(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().password()));
+                            dld.setTotp(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().totp()));
+                            dld.setUri(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().uri()));
+                            dld.setUsername(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().username()));
+                            if(cd.login().uris() != null) {
+                                for(UriData ud: cd.login().uris()) {
+                                    DecryptedUriData dud = new DecryptedUriData();
+                                    dud.setMatch(ud.match());
+                                    dud.setUri(decryptString(localUserKey, localOrganizationKeys, cd, ud.uri()));
+                                    dud.setUriChecksum(decryptString(localUserKey, localOrganizationKeys, cd, ud.uriChecksum()));
+                                };
+                            }
+                            dcd.setLogin(dld);
+                        }
+                        if (cd.sshKey() != null) {
+                            DecryptedSshKey dsk = new DecryptedSshKey();
+                            dsk.setKeyFingerprint(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().keyFingerPrint()));
+                            dsk.setPrivateKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().privateKey()));
+                            dsk.setPublicKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().publicKey()));
+                            dcd.setSshKey(dsk);
+                        }
+                        dcd.setNotes(decryptString(localUserKey, localOrganizationKeys, cd, cd.notes()));
+                        if(cd.fields() != null) {
+                            for (FieldData fd : cd.fields()) {
+                                DecryptedFieldData dfd = new DecryptedFieldData();
+                                dfd.setLinkedId(fd.linkedId());
+                                dfd.setType(fd.type());
+                                dfd.setName(decryptString(localUserKey, localOrganizationKeys, cd, fd.name()));
+                                dfd.setValue(decryptString(localUserKey, localOrganizationKeys, cd, fd.value()));
+                                dcd.getFields().add(dfd);
+                            }
+                        }
+                        result.getCiphers().add(dcd);
+                    } catch (Exception ex) {
+                        System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                    }
+                });
+        return result;
     }
 
     public String decryptString(CipherData cd, String encryptedString) throws GeneralSecurityException {
+        return decryptString(userKey, organizationKeys, cd, encryptedString);
+    }
+
+    public static String decryptString(EncryptionKey userKey, Map<String, EncryptionKey> organizationKeys, CipherData cd, String encryptedString) throws GeneralSecurityException {
         EncryptionKey ek;
         if (cd.organizationId() == null) {
             ek = userKey;

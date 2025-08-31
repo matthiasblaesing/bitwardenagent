@@ -16,6 +16,7 @@
 package eu.doppelhelix.app.bitwardenagent.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -23,7 +24,11 @@ public record CipherData(
         String id,
         String name,
         String organizationId,
+        @JsonProperty("notes")
+        String notes,
         LoginData login,
+        @JsonProperty("sshKey")
+        SshKey sshKey,
         List<FieldData> fields
         ) {
 

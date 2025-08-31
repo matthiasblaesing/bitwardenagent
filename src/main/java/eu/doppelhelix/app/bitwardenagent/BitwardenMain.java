@@ -18,7 +18,6 @@ package eu.doppelhelix.app.bitwardenagent;
 import com.formdev.flatlaf.FlatLightLaf;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import java.awt.BorderLayout;
-import java.awt.datatransfer.Clipboard;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.logging.Handler;

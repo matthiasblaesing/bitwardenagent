@@ -15,10 +15,8 @@
  */
 package eu.doppelhelix.app.bitwardenagent;
 
-import eu.doppelhelix.app.bitwardenagent.http.FieldData;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State;
-import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.BorderLayout;
 import java.util.EnumSet;
 import javax.swing.JPanel;
@@ -45,43 +43,6 @@ public class BitwardenMainPanel extends JPanel {
             if (!(getComponent(0) instanceof PasswordListPanel)) {
                 removeAll();
                 add(new PasswordListPanel(client));
-                UtilUI.runOffTheEdt(
-                        () -> {
-                            client.sync();
-                            client.getSyncData().ciphers()
-                                    .stream()
-                                    .forEach(cd -> {
-                                        try {
-                                            System.out.printf("%s (ID: %s)%n", client.decryptString(cd, cd.name()), cd.id());
-                                            if (cd.login() != null) {
-                                                System.out.printf("\tUsername: %s%n", client.decryptString(cd, cd.login().username()));
-                                                System.out.printf("\tPassword: %s%n", client.decryptString(cd, cd.login().password()));
-                                                System.out.printf("\tTOTP:     %s%n", client.decryptString(cd, cd.login().totp()));
-                                            }
-                                            System.out.printf("\tFields:%n");
-                                            if (cd.fields() != null && !cd.fields().isEmpty()) {
-                                                for (FieldData fd : cd.fields()) {
-                                                    System.out.printf("\t\t%2$s (%1$s - %4$s): %3$s%n",
-                                                            fd.type(),
-                                                            client.decryptString(cd, fd.name()),
-                                                            client.decryptString(cd, fd.value()),
-                                                            fd.linkedId()
-                                                    );
-                                                }
-                                            } else {
-                                                System.out.printf("\t\t-%n");
-                                            }
-                                        } catch (Exception ex) {
-                                            System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-                                        }
-                                    });
-                        },
-                        () -> System.exit(0),
-                        (ex) -> {
-                            ex.printStackTrace();
-                            System.exit(1);
-                        }
-                );
             }
         } else {
             removeAll();
@@ -92,9 +53,7 @@ public class BitwardenMainPanel extends JPanel {
             }
         }
 
-        SwingUtilities.invokeLater(() -> {
-            revalidate();
-            repaint();
-        });
+        revalidate();
+        repaint();
     }
 }

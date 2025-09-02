@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public record SshKey(
         String privateKey,
         String publicKey,
-        String keyFingerPrint
+        String keyFingerprint
         ) {
 
 }

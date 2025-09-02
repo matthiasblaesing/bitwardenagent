@@ -279,7 +279,7 @@ public class BitwardenClient implements Closeable {
                         }
                         if (cd.sshKey() != null) {
                             DecryptedSshKey dsk = new DecryptedSshKey();
-                            dsk.setKeyFingerprint(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().keyFingerPrint()));
+                            dsk.setKeyFingerprint(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().keyFingerprint()));
                             dsk.setPrivateKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().privateKey()));
                             dsk.setPublicKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().publicKey()));
                             dcd.setSshKey(dsk);

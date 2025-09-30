@@ -266,8 +266,11 @@ public class PasswordListPanel extends javax.swing.JPanel {
             if(decryptedCipherData.getLogin() != null) {
                 showLoginFields(true);
                 usernameField.setText(decryptedCipherData.getLogin().getUsername());
+                usernameField.setCaretPosition(0);
                 passwordField.setText(decryptedCipherData.getLogin().getPassword());
+                passwordField.setCaretPosition(0);
                 totpField.setText(decryptedCipherData.getLogin().getTotp());
+                totpField.setCaretPosition(0);
                 if(isNotNullNotEmpty(decryptedCipherData.getLogin().getUsername())) {
                     copyUsernameButton.setEnabled(true);
                 }
@@ -280,8 +283,11 @@ public class PasswordListPanel extends javax.swing.JPanel {
             } else if (decryptedCipherData.getSshKey() != null) {
                 showSshFields(true);
                 sshPrivateKeyField.setText(decryptedCipherData.getSshKey().getPrivateKey());
+                sshPrivateKeyField.setCaretPosition(0);
                 sshPublicKeyField.setText(decryptedCipherData.getSshKey().getPublicKey());
+                sshPublicKeyField.setCaretPosition(0);
                 sshFingerprintField.setText(decryptedCipherData.getSshKey().getKeyFingerprint());
+                sshFingerprintField.setCaretPosition(0);
                 if(isNotNullNotEmpty(decryptedCipherData.getSshKey().getPrivateKey())) {
                     copySshPrivateKey.setEnabled(true);
                 }

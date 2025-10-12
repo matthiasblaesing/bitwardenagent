@@ -19,6 +19,7 @@ import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State;
 import java.awt.BorderLayout;
 import java.util.EnumSet;
+import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -30,9 +31,11 @@ public class BitwardenMainPanel extends JPanel {
 
     private static final EnumSet PASSWORD_PANEL_STATES = EnumSet.of(Offline, Syncable, Syncing);
     private final BitwardenClient client;
+    private final JMenuBar menubar;
 
-    public BitwardenMainPanel(BitwardenClient client) {
+    public BitwardenMainPanel(BitwardenClient client, JMenuBar menubar) {
         this.client = client;
+        this.menubar = menubar;
         this.setLayout(new BorderLayout());
         client.addStateObserver((oldState, newState) -> SwingUtilities.invokeLater(() -> updateVisiblePanel(newState)));
         updateVisiblePanel(client.getState());

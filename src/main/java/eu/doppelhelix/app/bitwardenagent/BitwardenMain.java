@@ -17,13 +17,18 @@ package eu.doppelhelix.app.bitwardenagent;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
+import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.BorderLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ResourceBundle;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
 
@@ -31,6 +36,9 @@ import javax.swing.SwingUtilities;
  * Client for Bitwarden Systems
  */
 public class BitwardenMain {
+
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("eu/doppelhelix/app/bitwardenagent/Bundle");
+    private static final System.Logger LOG = System.getLogger(BitwardenMain.class.getName());
 
     public static void main(String[] args) throws Exception {
         Logger log = Logger.getLogger(BitwardenClient.class.getName());
@@ -51,13 +59,36 @@ public class BitwardenMain {
                     System.exit(0);
                 }
             });
+            JMenuBar menuBar = new JMenuBar();
+            JMenuItem exit = new JMenuItem(RESOURCE_BUNDLE.getString("menuItem.exit"));
+            exit.addActionListener(ae -> System.exit(0));
+            JMenuItem refresh = new JMenuItem(RESOURCE_BUNDLE.getString("menuItem.refresh"));
+            bwClient.addStateObserver((oldState, newState) -> {
+                SwingUtilities.invokeLater(() -> {
+                    refresh.setEnabled(newState == BitwardenClient.State.Syncable);
+                });
+            });
+            refresh.addActionListener(ae -> {
+                UtilUI.runOffTheEdt(
+                        () -> bwClient.sync(),
+                        () -> {
+                        },
+                        (exception) -> {
+                            LOG.log(System.Logger.Level.WARNING, "Failed to set master password", exception);
+                        }
+                );
+            });
+            JMenu fileMenu = new JMenu(RESOURCE_BUNDLE.getString("menuItem.file"));
+            menuBar.add(fileMenu);
+            fileMenu.add(refresh);
+            fileMenu.add(exit);
             frame.setLayout(new BorderLayout());
-            frame.add(new BitwardenMainPanel(bwClient), BorderLayout.CENTER);
+            frame.add(menuBar, BorderLayout.NORTH);
+            frame.add(new BitwardenMainPanel(bwClient, menuBar), BorderLayout.CENTER);
             frame.setSize(800, 600);
             frame.setLocationByPlatform(true);
             frame.setVisible(true);
         });
 
     }
-
 }

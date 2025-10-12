@@ -18,21 +18,27 @@ package eu.doppelhelix.app.bitwardenagent;
 import com.amdelamar.jotp.OTP;
 import com.amdelamar.jotp.type.Type;
 import com.formdev.flatlaf.util.HSLColor;
+import eu.doppelhelix.app.bitwardenagent.http.FieldType;
+import eu.doppelhelix.app.bitwardenagent.http.LinkedId;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.CopyFieldAction;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCipherData;
+import eu.doppelhelix.app.bitwardenagent.impl.DecryptedFieldData;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.lang.System.Logger.Level;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -43,16 +49,24 @@ import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignE;
 import org.kordamp.ikonli.swing.FontIcon;
+
+import static java.awt.GridBagConstraints.BASELINE_LEADING;
 
 /**
  *
@@ -82,6 +96,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private final DefaultListModel<DecryptedCipherData> passwordListModel = new DefaultListModel<>();
     private List<DecryptedCipherData> cipherList = List.of();
     private DecryptedCipherData decryptedCipherData;
+    private List<Component> additionalComponents = new ArrayList<>();
     private char passwordMask;
     private Timer totpTimer = new Timer(5000, ae -> updateTotpEvaluated());
 
@@ -193,12 +208,12 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
     private void updateVisiblePanel() {
         int dividerLocation = passwordListWrapper.getDividerLocation();
-        passwordPanel.setVisible(decryptedCipherData != null);
+        passwortPanelWrapper.setVisible(decryptedCipherData != null);
         selectEntryPanel.setVisible(decryptedCipherData == null);
         if(decryptedCipherData == null) {
             passwordListWrapper.setRightComponent(selectEntryPanel);
         } else {
-            passwordListWrapper.setRightComponent(passwordPanel);
+            passwordListWrapper.setRightComponent(passwortPanelWrapper);
         }
         passwordListWrapper.setDividerLocation(dividerLocation);
         revalidate();
@@ -301,6 +316,70 @@ public class PasswordListPanel extends javax.swing.JPanel {
         }
         updateVisiblePanel();
         updateTotpEvaluated();
+        additionalComponents.forEach(c -> passwordPanel.remove(c));
+        if (this.decryptedCipherData != null && this.decryptedCipherData.getFields() != null) {
+            Insets insets = new Insets(5, 5, 5, 5);
+            for (int i = 0; i < this.decryptedCipherData.getFields().size(); i++) {
+                DecryptedFieldData dfd = this.decryptedCipherData.getFields().get(i);
+                JLabel label = new JLabel(dfd.getName());
+                additionalComponents.add(label);
+                passwordPanel.add(label, new GridBagConstraints(0, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
+                if (dfd.getType() == FieldType.TEXT) {
+                    JTextField textField = new JTextField();
+                    textField.setColumns(25);
+                    textField.setEditable(false);
+                    textField.setText(dfd.getValue());
+                    JButton copyButton = new JButton();
+                    copyButton.setIcon(COPY_ICON);
+                    copyButton.setMinimumSize(new Dimension(24, 24));
+                    copyButton.setPreferredSize(new Dimension(24, 24));
+                    copyButton.setMaximumSize(new Dimension(24, 24));
+                    copyButton.addActionListener(new CopyFieldAction(textField));
+                    additionalComponents.add(textField);
+                    additionalComponents.add(copyButton);
+                    passwordPanel.add(copyButton, new GridBagConstraints(1, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
+                    passwordPanel.add(textField, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                } else if (dfd.getType() == FieldType.HIDDEN) {
+                    JPasswordField passwordField = new JPasswordField();
+                    passwordField.setColumns(25);
+                    passwordField.setEditable(false);
+                    passwordField.setText(dfd.getValue());
+                    JButton copyButton = new JButton();
+                    copyButton.setIcon(COPY_ICON);
+                    copyButton.setMinimumSize(new Dimension(24, 24));
+                    copyButton.setPreferredSize(new Dimension(24, 24));
+                    copyButton.setMaximumSize(new Dimension(24, 24));
+                    copyButton.addActionListener(new CopyFieldAction(passwordField));
+                    JToggleButton toggleVisibilityButton = new JToggleButton();
+                    toggleVisibilityButton.setIcon(CLOSED_EYE_ICON);
+                    toggleVisibilityButton.setMaximumSize(new java.awt.Dimension(24, 24));
+                    toggleVisibilityButton.setMinimumSize(new java.awt.Dimension(24, 24));
+                    toggleVisibilityButton.setPreferredSize(new java.awt.Dimension(24, 24));
+                    toggleVisibilityButton.setSelectedIcon(OPEN_EYE_ICON);
+                    toggleVisibilityButton.addActionListener(ae -> {
+                        passwordField.setEchoChar(toggleVisibilityButton.isSelected() ? '\u0000' : passwordMask);
+                    });
+                    additionalComponents.add(passwordField);
+                    additionalComponents.add(copyButton);
+                    additionalComponents.add(toggleVisibilityButton);
+                    passwordPanel.add(copyButton, new GridBagConstraints(1, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
+                    passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(2, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
+                    passwordPanel.add(passwordField, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                } else if (dfd.getType() == FieldType.CHECKBOX) {
+                    JCheckBox checkbox = new JCheckBox();
+                    checkbox.setEnabled(false);
+                    checkbox.setSelected(Boolean.parseBoolean(dfd.getValue()));
+                    additionalComponents.add(checkbox);
+                    passwordPanel.add(checkbox, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                } else if (dfd.getType() == FieldType.LINKED) {
+                    JComboBox<LinkedId> combobox = new JComboBox<>(LinkedId.values());
+                    combobox.setEnabled(false);
+                    combobox.setSelectedItem(dfd.getLinkedId());
+                    additionalComponents.add(combobox);
+                    passwordPanel.add(combobox, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                }
+            }
+        }
         revalidate();
         repaint();
         firePropertyChange("decryptedCipherData", old, this.decryptedCipherData);
@@ -412,6 +491,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordList = new javax.swing.JList<>();
         selectEntryPanel = new javax.swing.JPanel();
         selectEntryLabel = new javax.swing.JLabel();
+        passwortPanelWrapper = new javax.swing.JScrollPane();
         passwordPanel = new javax.swing.JPanel();
         passwordTitle = new javax.swing.JLabel();
         idLabel = new javax.swing.JLabel();
@@ -618,12 +698,12 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 25;
+        gridBagConstraints.gridy = 250;
         gridBagConstraints.weighty = 1.0;
         passwordPanel.add(fillerMiddle, gridBagConstraints);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 25;
+        gridBagConstraints.gridy = 250;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.weighty = 1.0;
         passwordPanel.add(fillerTrailing, gridBagConstraints);
@@ -823,7 +903,9 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(notesScrollPane, gridBagConstraints);
 
-        passwordListWrapper.setRightComponent(passwordPanel);
+        passwortPanelWrapper.setViewportView(passwordPanel);
+
+        passwordListWrapper.setRightComponent(passwortPanelWrapper);
 
         add(passwordListWrapper, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
@@ -857,6 +939,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private javax.swing.JPanel passwordPanel;
     private javax.swing.JLabel passwordTitle;
     private javax.swing.JToggleButton passwordVisible;
+    private javax.swing.JScrollPane passwortPanelWrapper;
     private javax.swing.JLabel selectEntryLabel;
     private javax.swing.JPanel selectEntryPanel;
     private javax.swing.JTextField sshFingerprintField;

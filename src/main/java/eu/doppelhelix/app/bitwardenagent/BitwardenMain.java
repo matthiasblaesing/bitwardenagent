@@ -16,21 +16,24 @@
 package eu.doppelhelix.app.bitwardenagent;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.util.SystemInfo;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.BorderLayout;
+import java.awt.Toolkit;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.lang.reflect.Field;
 import java.util.ResourceBundle;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
-
 
 /**
  * Client for Bitwarden Systems
@@ -49,9 +52,25 @@ public class BitwardenMain {
         }
 
         BitwardenClient bwClient = new BitwardenClient();
-
         SwingUtilities.invokeLater(() -> {
             FlatLightLaf.setup();
+            if (SystemInfo.isLinux) {
+                // enable custom window decorations
+                JFrame.setDefaultLookAndFeelDecorated(true);
+                JDialog.setDefaultLookAndFeelDecorated(true);
+                Toolkit toolkit = Toolkit.getDefaultToolkit();
+                Class<?> xtoolkit = toolkit.getClass();
+                //#183739 - provide proper app name on Linux
+                if (xtoolkit.getName().equals("sun.awt.X11.XToolkit")) { //NOI18N
+                    try {
+                        final Field awtAppClassName = xtoolkit.getDeclaredField("awtAppClassName"); //NOI18N
+                        awtAppClassName.setAccessible(true);
+                        awtAppClassName.set(null, "BitwardenAgent"); //NOI18N
+                    } catch (Exception x) {
+                        LOG.log(System.Logger.Level.WARNING, "", x);
+                    }
+                }
+            }
             JFrame frame = new JFrame("BitwardenAgent");
             frame.addWindowListener(new WindowAdapter() {
                 @Override
@@ -82,8 +101,8 @@ public class BitwardenMain {
             menuBar.add(fileMenu);
             fileMenu.add(refresh);
             fileMenu.add(exit);
+            frame.setJMenuBar(menuBar);
             frame.setLayout(new BorderLayout());
-            frame.add(menuBar, BorderLayout.NORTH);
             frame.add(new BitwardenMainPanel(bwClient, menuBar), BorderLayout.CENTER);
             frame.setSize(800, 600);
             frame.setLocationByPlatform(true);

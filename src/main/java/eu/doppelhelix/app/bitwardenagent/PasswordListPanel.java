@@ -15,8 +15,6 @@
  */
 package eu.doppelhelix.app.bitwardenagent;
 
-import com.amdelamar.jotp.OTP;
-import com.amdelamar.jotp.type.Type;
 import com.formdev.flatlaf.util.HSLColor;
 import eu.doppelhelix.app.bitwardenagent.http.FieldType;
 import eu.doppelhelix.app.bitwardenagent.http.LinkedId;
@@ -24,6 +22,7 @@ import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.CopyFieldAction;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCipherData;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedFieldData;
+import eu.doppelhelix.app.bitwardenagent.impl.TOTPUtil;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.Color;
 import java.awt.Component;
@@ -34,17 +33,9 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.lang.System.Logger.Level;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
@@ -428,17 +419,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private void updateTotpEvaluated() {
         String code = null;
         try {
-            // TODO implement variants with algorithm=SHA256 and algorithm=SHA512
-            Map<String,String> parameters = extractSecretFromOtpUrl(totpField.getText());
-            String hexTime = OTP.timeInHex(
-                    System.currentTimeMillis(),
-                    Integer.parseInt(parameters.getOrDefault("period", "30"))
-            );
-            code = OTP.create(
-                    parameters.getOrDefault("secret", ""),
-                    hexTime,
-                    Integer.parseInt(parameters.getOrDefault("digits", "6")),
-                    Type.TOTP);
+            code = TOTPUtil.calculateTOTP(totpField.getText());
         } catch (Exception ex) {
         }
         if(code != null) {
@@ -450,27 +431,6 @@ public class PasswordListPanel extends javax.swing.JPanel {
             totpEvaluatedField.setText("");
             copyTotpEvaluatedButton.setEnabled(false);
         }
-    }
-
-    private Map<String,String> extractSecretFromOtpUrl(String input) {
-        if(input == null || input.isBlank()) {
-            return null;
-        }
-        try {
-            URI uri = URI.create(totpField.getText());
-            return Arrays.stream(uri.getRawQuery().split("&"))
-                    .filter(queryPart -> queryPart.contains("="))
-                    .map(queryPart -> {
-                        String[] queryParts = queryPart.split("=", 2);
-                        String key = URLDecoder.decode(queryParts[0], StandardCharsets.UTF_8).toLowerCase();
-                        String value = URLDecoder.decode(queryParts[1], StandardCharsets.UTF_8);
-                        return new HashMap.SimpleEntry<>(key, value);
-                    })
-                    .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
-        } catch (Exception ex) {
-            LOG.log(Level.DEBUG, "Failed to parse URL", ex);
-        }
-        return null;
     }
 
     /**

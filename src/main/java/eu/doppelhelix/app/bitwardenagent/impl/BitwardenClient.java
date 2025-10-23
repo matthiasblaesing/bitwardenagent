@@ -273,6 +273,7 @@ public class BitwardenClient implements Closeable {
                                     dud.setMatch(ud.match());
                                     dud.setUri(decryptString(localUserKey, localOrganizationKeys, cd, ud.uri()));
                                     dud.setUriChecksum(decryptString(localUserKey, localOrganizationKeys, cd, ud.uriChecksum()));
+                                    dld.getUriData().add(dud);
                                 };
                             }
                             dcd.setLogin(dld);

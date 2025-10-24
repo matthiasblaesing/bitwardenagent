@@ -15,15 +15,17 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
+import eu.doppelhelix.app.bitwardenagent.http.UriMatchType;
+
 public class DecryptedUriData {
     private String uri;
     private String uriChecksum;
-    private int match;
+    private UriMatchType match;
 
     public DecryptedUriData() {
     }
 
-    public DecryptedUriData(String uri, String uriChecksum, int match) {
+    public DecryptedUriData(String uri, String uriChecksum, UriMatchType match) {
         this.uri = uri;
         this.uriChecksum = uriChecksum;
         this.match = match;
@@ -45,11 +47,11 @@ public class DecryptedUriData {
         this.uriChecksum = uriChecksum;
     }
 
-    public int getMatch() {
+    public UriMatchType getMatch() {
         return match;
     }
 
-    public void setMatch(int match) {
+    public void setMatch(UriMatchType match) {
         this.match = match;
     }
 

@@ -18,10 +18,4 @@ package eu.doppelhelix.app.bitwardenagent.http;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record UriData(
-        String uri,
-        String uriChecksum,
-        int match
-        ) {
-
-}
+public record UriData (String uri, String uriChecksum, UriMatchType match) {}

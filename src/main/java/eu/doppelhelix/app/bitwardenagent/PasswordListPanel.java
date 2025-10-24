@@ -18,11 +18,15 @@ package eu.doppelhelix.app.bitwardenagent;
 import com.formdev.flatlaf.util.HSLColor;
 import eu.doppelhelix.app.bitwardenagent.http.FieldType;
 import eu.doppelhelix.app.bitwardenagent.http.LinkedId;
+import eu.doppelhelix.app.bitwardenagent.http.UriMatchType;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.CopyFieldAction;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCipherData;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedFieldData;
+import eu.doppelhelix.app.bitwardenagent.impl.DecryptedUriData;
+import eu.doppelhelix.app.bitwardenagent.impl.LinkedIdListCellRenderer;
 import eu.doppelhelix.app.bitwardenagent.impl.TOTPUtil;
+import eu.doppelhelix.app.bitwardenagent.impl.UriMatchTypeListCellRenderer;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.Color;
 import java.awt.Component;
@@ -53,16 +57,15 @@ import javax.swing.JToggleButton;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignE;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignW;
 import org.kordamp.ikonli.swing.FontIcon;
 
 import static java.awt.GridBagConstraints.BASELINE_LEADING;
 
-/**
- *
- * @author matthias
- */
+
 public class PasswordListPanel extends javax.swing.JPanel {
 
     private static final System.Logger LOG = System.getLogger(PasswordListPanel.class.getName());
@@ -70,17 +73,26 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private static final ImageIcon OPEN_EYE_ICON;
     private static final ImageIcon CLOSED_EYE_ICON;
     private static final ImageIcon COPY_ICON;
+    private static final ImageIcon WRENCH_ICON;
+    private static final ImageIcon WRENCH_CHECK_ICON;
 
     static {
+
         FontIcon openEyeIcon = FontIcon.of(MaterialDesignE.EYE);
         FontIcon closedEyeIcon = FontIcon.of(MaterialDesignE.EYE_OFF);
         FontIcon copyIcon = FontIcon.of(MaterialDesignC.CONTENT_COPY);
+        FontIcon wrenchIcon = FontIcon.of(MaterialDesignW.WRENCH);
+        FontIcon wrenchCogIcon = FontIcon.of(MaterialDesignW.WRENCH_CHECK);
         openEyeIcon.setIconSize(20);
         closedEyeIcon.setIconSize(20);
         copyIcon.setIconSize(20);
+        wrenchIcon.setIconSize(20);
+        wrenchCogIcon.setIconSize(20);
         OPEN_EYE_ICON = openEyeIcon.toImageIcon();
         CLOSED_EYE_ICON = closedEyeIcon.toImageIcon();
         COPY_ICON = copyIcon.toImageIcon();
+        WRENCH_ICON = wrenchIcon.toImageIcon();
+        WRENCH_CHECK_ICON = wrenchCogIcon.toImageIcon();
     }
 
     private final BitwardenClient client;
@@ -307,40 +319,72 @@ public class PasswordListPanel extends javax.swing.JPanel {
         }
         updateVisiblePanel();
         updateTotpEvaluated();
+        int componentRow = 11;
         additionalComponents.forEach(c -> passwordPanel.remove(c));
+
+        Insets defaultInsets = new Insets(5, 5, 5, 5);
+        if (this.decryptedCipherData != null
+                && this.decryptedCipherData.getLogin() != null
+                && this.decryptedCipherData.getLogin().getUriData() != null) {
+            for(DecryptedUriData ud: this.decryptedCipherData.getLogin().getUriData()) {
+                JLabel label = new JLabel("Website:");
+                additionalComponents.add(label);
+                passwordPanel.add(label, new GridBagConstraints(0, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                JTextField uriField = new JTextField();
+                uriField.setColumns(25);
+                uriField.setEditable(false);
+                uriField.setText(ud.getUri());
+                JComboBox<UriMatchType> combobox = new JComboBox<>(UriMatchType.values());
+                combobox.setRenderer(new UriMatchTypeListCellRenderer());
+                combobox.setEnabled(false);
+                combobox.setSelectedItem(ud.getMatch());
+                JButton copyButton = buildCopyButton(uriField);
+                JToggleButton toggleVisibilityButton = new JToggleButton();
+                toggleVisibilityButton.setIcon(WRENCH_ICON);
+                toggleVisibilityButton.setMaximumSize(new java.awt.Dimension(24, 24));
+                toggleVisibilityButton.setMinimumSize(new java.awt.Dimension(24, 24));
+                toggleVisibilityButton.setPreferredSize(new java.awt.Dimension(24, 24));
+                toggleVisibilityButton.setSelectedIcon(WRENCH_CHECK_ICON);
+                toggleVisibilityButton.addActionListener(ae -> {
+                    combobox.setVisible(toggleVisibilityButton.isSelected());
+                    this.revalidate();
+                });
+                additionalComponents.add(uriField);
+                additionalComponents.add(copyButton);
+                additionalComponents.add(toggleVisibilityButton);
+                passwordPanel.add(copyButton, new GridBagConstraints(1, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(2, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(uriField, new GridBagConstraints(3, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                componentRow++;
+                additionalComponents.add(combobox);
+                passwordPanel.add(combobox, new GridBagConstraints(3, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                combobox.setVisible(false);
+                componentRow++;
+            }
+        }
+
         if (this.decryptedCipherData != null && this.decryptedCipherData.getFields() != null) {
-            Insets insets = new Insets(5, 5, 5, 5);
             for (int i = 0; i < this.decryptedCipherData.getFields().size(); i++) {
                 DecryptedFieldData dfd = this.decryptedCipherData.getFields().get(i);
                 JLabel label = new JLabel(dfd.getName());
                 additionalComponents.add(label);
-                passwordPanel.add(label, new GridBagConstraints(0, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
+                passwordPanel.add(label, new GridBagConstraints(0, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
                 if (dfd.getType() == FieldType.TEXT) {
                     JTextField textField = new JTextField();
                     textField.setColumns(25);
                     textField.setEditable(false);
                     textField.setText(dfd.getValue());
-                    JButton copyButton = new JButton();
-                    copyButton.setIcon(COPY_ICON);
-                    copyButton.setMinimumSize(new Dimension(24, 24));
-                    copyButton.setPreferredSize(new Dimension(24, 24));
-                    copyButton.setMaximumSize(new Dimension(24, 24));
-                    copyButton.addActionListener(new CopyFieldAction(textField));
+                    JButton copyButton = buildCopyButton(textField);
                     additionalComponents.add(textField);
                     additionalComponents.add(copyButton);
-                    passwordPanel.add(copyButton, new GridBagConstraints(1, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
-                    passwordPanel.add(textField, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                    passwordPanel.add(copyButton, new GridBagConstraints(1, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                    passwordPanel.add(textField, new GridBagConstraints(3, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 } else if (dfd.getType() == FieldType.HIDDEN) {
                     JPasswordField passwordField = new JPasswordField();
                     passwordField.setColumns(25);
                     passwordField.setEditable(false);
                     passwordField.setText(dfd.getValue());
-                    JButton copyButton = new JButton();
-                    copyButton.setIcon(COPY_ICON);
-                    copyButton.setMinimumSize(new Dimension(24, 24));
-                    copyButton.setPreferredSize(new Dimension(24, 24));
-                    copyButton.setMaximumSize(new Dimension(24, 24));
-                    copyButton.addActionListener(new CopyFieldAction(passwordField));
+                    JButton copyButton = buildCopyButton(passwordField);
                     JToggleButton toggleVisibilityButton = new JToggleButton();
                     toggleVisibilityButton.setIcon(CLOSED_EYE_ICON);
                     toggleVisibilityButton.setMaximumSize(new java.awt.Dimension(24, 24));
@@ -353,27 +397,39 @@ public class PasswordListPanel extends javax.swing.JPanel {
                     additionalComponents.add(passwordField);
                     additionalComponents.add(copyButton);
                     additionalComponents.add(toggleVisibilityButton);
-                    passwordPanel.add(copyButton, new GridBagConstraints(1, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
-                    passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(2, 11 + i, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, insets, 0, 0));
-                    passwordPanel.add(passwordField, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                    passwordPanel.add(copyButton, new GridBagConstraints(1, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                    passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(2, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                    passwordPanel.add(passwordField, new GridBagConstraints(3, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 } else if (dfd.getType() == FieldType.CHECKBOX) {
                     JCheckBox checkbox = new JCheckBox();
                     checkbox.setEnabled(false);
                     checkbox.setSelected(Boolean.parseBoolean(dfd.getValue()));
                     additionalComponents.add(checkbox);
-                    passwordPanel.add(checkbox, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                    passwordPanel.add(checkbox, new GridBagConstraints(3, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 } else if (dfd.getType() == FieldType.LINKED) {
                     JComboBox<LinkedId> combobox = new JComboBox<>(LinkedId.values());
+                    combobox.setRenderer(new LinkedIdListCellRenderer());
                     combobox.setEnabled(false);
                     combobox.setSelectedItem(dfd.getLinkedId());
                     additionalComponents.add(combobox);
-                    passwordPanel.add(combobox, new GridBagConstraints(3, 11 + i, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, insets, 0, 0));
+                    passwordPanel.add(combobox, new GridBagConstraints(3, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 }
+                componentRow++;
             }
         }
         revalidate();
         repaint();
         firePropertyChange("decryptedCipherData", old, this.decryptedCipherData);
+    }
+
+    public JButton buildCopyButton(JTextComponent textField) {
+        JButton copyButton = new JButton();
+        copyButton.setIcon(COPY_ICON);
+        copyButton.setMinimumSize(new Dimension(24, 24));
+        copyButton.setPreferredSize(new Dimension(24, 24));
+        copyButton.setMaximumSize(new Dimension(24, 24));
+        copyButton.addActionListener(new CopyFieldAction(textField));
+        return copyButton;
     }
 
     public void showLoginFields(boolean state) {

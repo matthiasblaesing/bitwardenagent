@@ -15,45 +15,45 @@
  */
 package eu.doppelhelix.app.bitwardenagent.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import eu.doppelhelix.app.bitwardenagent.impl.UriMatchTypeDeserialiser;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public enum FieldType {
-    TEXT(0),
-    HIDDEN(1),
-    CHECKBOX(2),
-    LINKED(3);
+@JsonDeserialize(using = UriMatchTypeDeserialiser.class)
+public enum UriMatchType {
+    STANDARD(null),
+    BASE_DOMAIN(0),
+    HOST(1),
+    STARTS_WITH(2),
+    EXACT(3),
+    REGEXP(4),
+    NEVER(5);
 
-    private static final Map<Integer,FieldType> ID_MAP;
+    private static final Map<Integer, UriMatchType> ID_MAP;
 
     static {
-        Map<Integer, FieldType> ID_MAP_BUILDER = new HashMap<>();
-        for (FieldType umt : values()) {
+        Map<Integer, UriMatchType> ID_MAP_BUILDER = new HashMap<>();
+        for (UriMatchType umt : values()) {
             ID_MAP_BUILDER.put(umt.getWireValue(), umt);
         }
         ID_MAP = Collections.unmodifiableMap(ID_MAP_BUILDER);
     }
 
-    @JsonCreator
-    public static FieldType fromWireValue(Integer id) {
-        if (id == null) {
-            return null;
-        } else {
-            return ID_MAP.get(id);
-        }
+    public static UriMatchType fromWireValue(Integer id) {
+        return ID_MAP.get(id);
     }
 
-    private FieldType(int wireValue) {
+    private UriMatchType(Integer wireValue) {
         this.wireValue = wireValue;
     }
 
-    private final int wireValue;
+    private final Integer wireValue;
 
     @JsonValue
-    public int getWireValue() {
+    public Integer getWireValue() {
         return wireValue;
     }
 

@@ -110,6 +110,10 @@ public class PasswordListPanel extends javax.swing.JPanel {
         this.client = client;
         initComponents();
         updateVisiblePanel();
+        passwordListScrollPane.getHorizontalScrollBar().setUnitIncrement(getFont().getSize());
+        passwordListScrollPane.getHorizontalScrollBar().setUnitIncrement(getFont().getSize());
+        passwordPanelScrollPane.getHorizontalScrollBar().setUnitIncrement(getFont().getSize());
+        passwordPanelScrollPane.getVerticalScrollBar().setUnitIncrement(getFont().getSize());
         passwordPanel.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -211,12 +215,12 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
     private void updateVisiblePanel() {
         int dividerLocation = passwordListWrapper.getDividerLocation();
-        passwortPanelWrapper.setVisible(decryptedCipherData != null);
+        passwordPanelScrollPane.setVisible(decryptedCipherData != null);
         selectEntryPanel.setVisible(decryptedCipherData == null);
         if(decryptedCipherData == null) {
             passwordListWrapper.setRightComponent(selectEntryPanel);
         } else {
-            passwordListWrapper.setRightComponent(passwortPanelWrapper);
+            passwordListWrapper.setRightComponent(passwordPanelScrollPane);
         }
         passwordListWrapper.setDividerLocation(dividerLocation);
         revalidate();
@@ -507,7 +511,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordList = new javax.swing.JList<>();
         selectEntryPanel = new javax.swing.JPanel();
         selectEntryLabel = new javax.swing.JLabel();
-        passwortPanelWrapper = new javax.swing.JScrollPane();
+        passwordPanelScrollPane = new javax.swing.JScrollPane();
         passwordPanel = new javax.swing.JPanel();
         passwordTitle = new javax.swing.JLabel();
         idLabel = new javax.swing.JLabel();
@@ -919,9 +923,9 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(notesScrollPane, gridBagConstraints);
 
-        passwortPanelWrapper.setViewportView(passwordPanel);
+        passwordPanelScrollPane.setViewportView(passwordPanel);
 
-        passwordListWrapper.setRightComponent(passwortPanelWrapper);
+        passwordListWrapper.setRightComponent(passwordPanelScrollPane);
 
         add(passwordListWrapper, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
@@ -953,9 +957,9 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private javax.swing.JScrollPane passwordListScrollPane;
     private javax.swing.JSplitPane passwordListWrapper;
     private javax.swing.JPanel passwordPanel;
+    private javax.swing.JScrollPane passwordPanelScrollPane;
     private javax.swing.JLabel passwordTitle;
     private javax.swing.JToggleButton passwordVisible;
-    private javax.swing.JScrollPane passwortPanelWrapper;
     private javax.swing.JLabel selectEntryLabel;
     private javax.swing.JPanel selectEntryPanel;
     private javax.swing.JTextField sshFingerprintField;

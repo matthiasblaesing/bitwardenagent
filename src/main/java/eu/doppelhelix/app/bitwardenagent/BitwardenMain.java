@@ -23,11 +23,15 @@ import java.awt.BorderLayout;
 import java.awt.Toolkit;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ResourceBundle;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -78,6 +82,12 @@ public class BitwardenMain {
                     System.exit(0);
                 }
             });
+            try(InputStream is = BitwardenMain.class.getResourceAsStream("/icon.png")) {
+                BufferedImage bi = ImageIO.read(is);
+                frame.setIconImage(bi);
+            } catch (IOException ex) {
+                LOG.log(System.Logger.Level.WARNING, "Failed to load application icon", ex);
+            }
             JMenuBar menuBar = new JMenuBar();
             JMenuItem exit = new JMenuItem(RESOURCE_BUNDLE.getString("menuItem.exit"));
             exit.addActionListener(ae -> System.exit(0));

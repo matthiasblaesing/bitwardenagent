@@ -17,7 +17,6 @@ package eu.doppelhelix.app.bitwardenagent.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.doppelhelix.app.bitwardenagent.BitwardenMain;
-import eu.doppelhelix.app.bitwardenagent.Configuration;
 import eu.doppelhelix.app.bitwardenagent.http.CipherData;
 import eu.doppelhelix.app.bitwardenagent.http.ConfigResponse;
 import eu.doppelhelix.app.bitwardenagent.http.FieldData;
@@ -110,11 +109,11 @@ public class BitwardenClient implements Closeable {
                 .register(new LoggingFeature(Logger.getLogger(BitwardenClient.class.getName()), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY, 65535))
                 .build();
         configPath = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
-                ? Path.of(System.getenv("LOCALAPPDATA"), "BitwardenAgent", "config.json")
-                : Path.of(System.getenv("HOME"), ".config/BitwardenAgent", "config.json");
+                ? Path.of(System.getenv("APPDATA"), "BitwardenAgent", "state.json")
+                : Path.of(System.getenv("HOME"), ".config/BitwardenAgent", "state.json");
         if (Files.exists(configPath)) {
             try {
-                Configuration config = objectMapper.readValue(configPath.toFile(), Configuration.class);
+                ClientState config = objectMapper.readValue(configPath.toFile(), ClientState.class);
                 email = config.getEmail();
                 baseURI = config.getBaseUri() != null ? config.getBaseUri() : this.baseURI;
                 if(config.getClientId() != null) {
@@ -238,6 +237,9 @@ public class BitwardenClient implements Closeable {
 
     public DecryptedSyncData getSyncData() {
         EncryptionKey localUserKey = userKey;
+        if(userKey == null || this.organizationKeys == null) {
+            return null;
+        }
         Map<String, EncryptionKey> localOrganizationKeys = new HashMap<>(this.organizationKeys);
         SyncData localSyncData = syncData;
         if (localSyncData == null) {
@@ -319,7 +321,7 @@ public class BitwardenClient implements Closeable {
     }
 
     private void store() {
-        Configuration config = new Configuration();
+        ClientState config = new ClientState();
         config.setEmail(this.email);
         config.setBaseUri(baseURI);
         config.setClientId(deviceId);

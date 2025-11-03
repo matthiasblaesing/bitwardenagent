@@ -19,6 +19,7 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
+import eu.doppelhelix.app.bitwardenagent.server.UnixDomainSocketServer;
 import java.awt.BorderLayout;
 import java.awt.Toolkit;
 import java.awt.event.WindowAdapter;
@@ -28,10 +29,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -56,6 +59,10 @@ public class BitwardenMain {
         }
 
         BitwardenClient bwClient = new BitwardenClient();
+
+        AtomicReference<UnixDomainSocketServer> udss = new AtomicReference<>();
+        AtomicReference<JCheckBoxMenuItem> enableServerReference = new AtomicReference<>();
+
         SwingUtilities.invokeLater(() -> {
             FlatLightLaf.setup();
             if (SystemInfo.isLinux) {
@@ -107,9 +114,19 @@ public class BitwardenMain {
                         }
                 );
             });
+            JCheckBoxMenuItem enableServer = new JCheckBoxMenuItem(RESOURCE_BUNDLE.getString("menuItem.enableServer"));
+            enableServer.addActionListener(ae -> {
+                boolean newState = !Configuration.getConfiguration().isStartUnixDomainSocketServer();
+                Configuration.getConfiguration().setStartUnixDomainSocketServer(newState);
+            });
+            enableServer.setState(Configuration.getConfiguration().isStartUnixDomainSocketServer());
+            enableServerReference.set(enableServer);
             JMenu fileMenu = new JMenu(RESOURCE_BUNDLE.getString("menuItem.file"));
             menuBar.add(fileMenu);
             fileMenu.add(refresh);
+            fileMenu.addSeparator();
+            fileMenu.add(enableServer);
+            fileMenu.addSeparator();
             fileMenu.add(exit);
             frame.setJMenuBar(menuBar);
             frame.setLayout(new BorderLayout());
@@ -118,6 +135,40 @@ public class BitwardenMain {
             frame.setLocationByPlatform(true);
             frame.setVisible(true);
         });
+
+        Runnable unixDomainSocketServerStarter = () -> {
+            JCheckBoxMenuItem jcbmi = enableServerReference.get();
+            if(jcbmi != null) {
+                SwingUtilities.invokeLater(() -> jcbmi.setState(Configuration.getConfiguration().isStartUnixDomainSocketServer()));
+            }
+            try {
+                synchronized (udss) {
+                    if (Configuration.getConfiguration().isStartUnixDomainSocketServer()) {
+                        if(udss.get() == null) {
+                            UnixDomainSocketServer server = new UnixDomainSocketServer(bwClient);
+                            server.start();
+                            udss.set(server);
+                        }
+                    } else {
+                        if(udss.get() != null) {
+                            UnixDomainSocketServer server = udss.get();
+                            udss.set(null);
+                            server.shutdown();
+                        }
+                    }
+                }
+            } catch (IOException ex) {
+                LOG.log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+        };
+
+        Configuration.getConfiguration().addObserver((name, value) -> {
+            if ("startUnixDomainSocketServer".equals(name)) {
+                unixDomainSocketServerStarter.run();
+            }
+        });
+
+        unixDomainSocketServerStarter.run();
 
     }
 }

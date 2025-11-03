@@ -15,65 +15,86 @@
  */
 package eu.doppelhelix.app.bitwardenagent;
 
-import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
-import eu.doppelhelix.app.bitwardenagent.http.SyncData;
-import java.net.URI;
-import java.util.UUID;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Configuration {
-    private UUID clientId;
-    private URI baseUri;
-    private String email;
-    private String refreshToken;
-    private SyncData syncData;
-    private PreloginResult preloginResult;
+    private static final System.Logger LOG = System.getLogger(Configuration.class.getName());
 
-    public UUID getClientId() {
-        return clientId;
+    private static final Configuration INSTANCE = new Configuration();
+
+    public static Configuration getConfiguration() {
+        return INSTANCE;
     }
 
-    public void setClientId(UUID clientId) {
-        this.clientId = clientId;
+    private final Path configPath;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final List<ConfigurationObserver> observer = new CopyOnWriteArrayList();
+    private Map<String, Object> configData = new ConcurrentHashMap<>();
+
+    private Configuration() {
+            configPath = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+                ? Path.of(System.getenv("APPDATA"), "BitwardenAgent", "config.json")
+                : Path.of(System.getenv("HOME"), ".config/BitwardenAgent", "config.json");
+            configData = new HashMap<>();
+            readConfig();
     }
 
-    public URI getBaseUri() {
-        return baseUri;
+    public void addObserver(ConfigurationObserver configurationObserver) {
+        Objects.requireNonNull(configurationObserver);
+        this.observer.add(configurationObserver);
     }
 
-    public void setBaseUri(URI baseUri) {
-        this.baseUri = baseUri;
+    public void removeObserver(ConfigurationObserver configurationObserver) {
+        Objects.requireNonNull(configurationObserver);
+        this.observer.remove(configurationObserver);
     }
 
-    public String getEmail() {
-        return email;
+    public void setStartUnixDomainSocketServer(boolean value) {
+        configData.put("startUnixDomainSocketServer", value);
+        writeConfig();
+        this.observer.forEach(co -> co.updatedValue("startUnixDomainSocketServer", value));
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public boolean isStartUnixDomainSocketServer() {
+        try {
+            return (boolean) configData.getOrDefault("startUnixDomainSocketServer", false);
+        } catch (ClassCastException ex) {
+            return false;
+        }
     }
 
-    public SyncData getSyncData() {
-        return syncData;
+    private void writeConfig() {
+        try {
+            Files.createDirectories(configPath.getParent());
+            objectMapper.writeValue(configPath.toFile(), configData);
+        } catch (IOException ex) {
+            LOG.log(System.Logger.Level.ERROR, (String) "Failed to write configuration", ex);
+        }
     }
 
-    public void setSyncData(SyncData syncData) {
-        this.syncData = syncData;
+    private void readConfig() {
+        if (Files.exists(configPath)) {
+            try {
+                configData = objectMapper.readValue(configPath.toFile(), new TypeReference<ConcurrentHashMap<String, Object>>() {
+                });
+            } catch (IOException ex) {
+                LOG.log(System.Logger.Level.ERROR, (String) "Failed to read configuration", ex);
+            }
+        }
     }
 
-    public String getRefreshToken() {
-        return refreshToken;
+    public interface ConfigurationObserver {
+        public void updatedValue(String name, Object value);
     }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
-    public PreloginResult getPreloginResult() {
-        return preloginResult;
-    }
-
-    public void setPreloginResult(PreloginResult preloginResult) {
-        this.preloginResult = preloginResult;
-    }
-
 }

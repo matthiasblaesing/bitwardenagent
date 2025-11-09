@@ -29,6 +29,8 @@ public class DecryptedCipherData {
     private DecryptedSshKey sshKey;
     private String notes;
     private final List<DecryptedFieldData> fields = new ArrayList<> ();
+    private String folderId;
+    private final List<String> collectionIds = new ArrayList<>();
 
     public DecryptedCipherData() {
     }
@@ -91,6 +93,18 @@ public class DecryptedCipherData {
 
     public List<DecryptedFieldData> getFields() {
         return fields;
+    }
+
+    public String getFolderId() {
+        return folderId;
+    }
+
+    public void setFolderId(String folderId) {
+        this.folderId = folderId;
+    }
+
+    public List<String> getCollectionIds() {
+        return collectionIds;
     }
 
 }

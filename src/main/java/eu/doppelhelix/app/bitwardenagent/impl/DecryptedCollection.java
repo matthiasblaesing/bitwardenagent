@@ -15,20 +15,16 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-public class DecryptedSyncData {
-
+public class DecryptedCollection {
     private String id;
-    private String email;
+    private String organizationId;
     private String name;
-    private final Map<String, String> organizationNames = new HashMap<>();
-    private final List<DecryptedCipherData> ciphers = new ArrayList<>();
-    private final List<DecryptedCollection> collections = new ArrayList<>();
-    private final List<DecryptedFolder> folder = new ArrayList<>();
+    private boolean readOnly;
+    private boolean hidePasswords;
+    private boolean manage;
+
+    public DecryptedCollection() {
+    }
 
     public String getId() {
         return id;
@@ -38,12 +34,12 @@ public class DecryptedSyncData {
         this.id = id;
     }
 
-    public String getEmail() {
-        return email;
+    public String getOrganizationId() {
+        return organizationId;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setOrganizationId(String organizationId) {
+        this.organizationId = organizationId;
     }
 
     public String getName() {
@@ -54,20 +50,29 @@ public class DecryptedSyncData {
         this.name = name;
     }
 
-    public Map<String, String> getOrganizationNames() {
-        return organizationNames;
+    public boolean isReadOnly() {
+        return readOnly;
     }
 
-    public List<DecryptedCipherData> getCiphers() {
-        return ciphers;
+    public void setReadOnly(boolean readOnly) {
+        this.readOnly = readOnly;
     }
 
-    public List<DecryptedCollection> getCollections() {
-        return collections;
+    public boolean isHidePasswords() {
+        return hidePasswords;
     }
 
-    public List<DecryptedFolder> getFolder() {
-        return folder;
+    public void setHidePasswords(boolean hidePasswords) {
+        this.hidePasswords = hidePasswords;
     }
+
+    public boolean isManage() {
+        return manage;
+    }
+
+    public void setManage(boolean manager) {
+        this.manage = manager;
+    }
+
 
 }

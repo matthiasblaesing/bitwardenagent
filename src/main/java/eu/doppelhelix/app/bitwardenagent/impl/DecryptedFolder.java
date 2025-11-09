@@ -15,20 +15,15 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.OffsetDateTime;
 
-public class DecryptedSyncData {
-
+public class DecryptedFolder {
     private String id;
-    private String email;
     private String name;
-    private final Map<String, String> organizationNames = new HashMap<>();
-    private final List<DecryptedCipherData> ciphers = new ArrayList<>();
-    private final List<DecryptedCollection> collections = new ArrayList<>();
-    private final List<DecryptedFolder> folder = new ArrayList<>();
+    private OffsetDateTime revisionDate;
+
+    public DecryptedFolder() {
+    }
 
     public String getId() {
         return id;
@@ -36,14 +31,6 @@ public class DecryptedSyncData {
 
     public void setId(String id) {
         this.id = id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getName() {
@@ -54,20 +41,17 @@ public class DecryptedSyncData {
         this.name = name;
     }
 
-    public Map<String, String> getOrganizationNames() {
-        return organizationNames;
+    public OffsetDateTime getRevisionDate() {
+        return revisionDate;
     }
 
-    public List<DecryptedCipherData> getCiphers() {
-        return ciphers;
+    public void setRevisionDate(OffsetDateTime revisionDate) {
+        this.revisionDate = revisionDate;
     }
 
-    public List<DecryptedCollection> getCollections() {
-        return collections;
-    }
-
-    public List<DecryptedFolder> getFolder() {
-        return folder;
+    @Override
+    public String toString() {
+        return "DecryptedFolder{" + "id=" + id + ", name=" + name + ", revisionDate=" + revisionDate + '}';
     }
 
 }

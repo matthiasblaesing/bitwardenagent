@@ -16,14 +16,13 @@
 package eu.doppelhelix.app.bitwardenagent.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
+import java.time.OffsetDateTime;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record SyncData(
-        ProfileData profile,
-        List<CipherData> ciphers,
-        List<Folder> folders,
-        List<Collection> collections
-) {
+public record Folder (
+        String id,
+        String name,
+        OffsetDateTime revisionDate
+    ) {
 
 }

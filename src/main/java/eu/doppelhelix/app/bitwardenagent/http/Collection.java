@@ -16,14 +16,15 @@
 package eu.doppelhelix.app.bitwardenagent.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record SyncData(
-        ProfileData profile,
-        List<CipherData> ciphers,
-        List<Folder> folders,
-        List<Collection> collections
-) {
+public record Collection (
+        boolean readOnly,
+        boolean hidePasswords,
+        boolean manage,
+        String id,
+        String organizationId,
+        String name
+    ) {
 
 }

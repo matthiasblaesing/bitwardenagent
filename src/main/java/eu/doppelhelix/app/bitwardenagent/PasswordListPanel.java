@@ -23,8 +23,10 @@ import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.CopyFieldAction;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCipherData;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedFieldData;
+import eu.doppelhelix.app.bitwardenagent.impl.DecryptedSyncData;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedUriData;
 import eu.doppelhelix.app.bitwardenagent.impl.LinkedIdListCellRenderer;
+import eu.doppelhelix.app.bitwardenagent.impl.OUFolderTreeNode;
 import eu.doppelhelix.app.bitwardenagent.impl.TOTPUtil;
 import eu.doppelhelix.app.bitwardenagent.impl.UriMatchTypeListCellRenderer;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
@@ -38,8 +40,17 @@ import java.awt.Insets;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
@@ -54,45 +65,48 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.JTree;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
 import javax.swing.text.JTextComponent;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
+import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignE;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignF;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignO;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignS;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignW;
 import org.kordamp.ikonli.swing.FontIcon;
 
 import static java.awt.GridBagConstraints.BASELINE_LEADING;
+import static java.util.Arrays.stream;
+import static java.util.stream.Stream.ofNullable;
 
 
 public class PasswordListPanel extends javax.swing.JPanel {
 
     private static final System.Logger LOG = System.getLogger(PasswordListPanel.class.getName());
 
-    private static final ImageIcon OPEN_EYE_ICON;
-    private static final ImageIcon CLOSED_EYE_ICON;
-    private static final ImageIcon COPY_ICON;
-    private static final ImageIcon WRENCH_ICON;
-    private static final ImageIcon WRENCH_CHECK_ICON;
+    private static final ImageIcon OPEN_EYE_ICON = createIcon(MaterialDesignE.EYE, 20);
+    private static final ImageIcon CLOSED_EYE_ICON = createIcon(MaterialDesignE.EYE_OFF, 20);
+    private static final ImageIcon COPY_ICON = createIcon(MaterialDesignC.CONTENT_COPY, 20);
+    private static final ImageIcon WRENCH_ICON = createIcon(MaterialDesignW.WRENCH_CHECK, 20);
+    private static final ImageIcon WRENCH_CHECK_ICON = createIcon(MaterialDesignW.WRENCH_CHECK, 20);
+    private static final ImageIcon FOLDER_ICON = createIcon(MaterialDesignF.FOLDER, 16);
+    private static final ImageIcon OFFICE_BUILDING_ICON = createIcon(MaterialDesignO.OFFICE_BUILDING, 16);
+    private static final ImageIcon SELECT_GROUP_ICON = createIcon(MaterialDesignS.SELECT_GROUP, 16);
 
-    static {
-
-        FontIcon openEyeIcon = FontIcon.of(MaterialDesignE.EYE);
-        FontIcon closedEyeIcon = FontIcon.of(MaterialDesignE.EYE_OFF);
-        FontIcon copyIcon = FontIcon.of(MaterialDesignC.CONTENT_COPY);
-        FontIcon wrenchIcon = FontIcon.of(MaterialDesignW.WRENCH);
-        FontIcon wrenchCogIcon = FontIcon.of(MaterialDesignW.WRENCH_CHECK);
-        openEyeIcon.setIconSize(20);
-        closedEyeIcon.setIconSize(20);
-        copyIcon.setIconSize(20);
-        wrenchIcon.setIconSize(20);
-        wrenchCogIcon.setIconSize(20);
-        OPEN_EYE_ICON = openEyeIcon.toImageIcon();
-        CLOSED_EYE_ICON = closedEyeIcon.toImageIcon();
-        COPY_ICON = copyIcon.toImageIcon();
-        WRENCH_ICON = wrenchIcon.toImageIcon();
-        WRENCH_CHECK_ICON = wrenchCogIcon.toImageIcon();
+    private static ImageIcon createIcon(Ikon ikon, int size) {
+        FontIcon fi = FontIcon.of(ikon);
+        fi.setIconSize(size);
+        return fi.toImageIcon();
     }
 
     private final BitwardenClient client;
@@ -102,6 +116,11 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private List<Component> additionalComponents = new ArrayList<>();
     private char passwordMask;
     private Timer totpTimer = new Timer(5000, ae -> updateTotpEvaluated());
+    private DefaultTreeModel passwordListGroupModel = new DefaultTreeModel(null);
+    private Set<String> selectedOrganizations = new HashSet<>();
+    private Set<String> selectedCollections = new HashSet<>();
+    private Set<String> selectedFolders = new HashSet<>();
+    private boolean selectedUnnamedFolder = false;
 
     /**
      * Creates new form PasswordListPanel
@@ -195,7 +214,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordList.setModel(passwordListModel);
         client.addStateObserver((oldState, newState) -> updatePasswordsFromClient());
         updatePasswordsFromClient();
-        passwordListFilter.getDocument().addDocumentListener(new DocumentListener() {
+        passwordListQuickFilter.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 updateFilteredList();
@@ -208,6 +227,58 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
             @Override
             public void changedUpdate(DocumentEvent e) {
+                updateFilteredList();
+            }
+        });
+        passwordListGroupSelector.setRootVisible(true);
+        passwordListGroupSelector.setCellRenderer(new DefaultTreeCellRenderer() {
+            @Override
+            public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+                JLabel renderer = (JLabel) super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+                boolean plainFont = true;
+                if(value instanceof OUFolderTreeNode ouftn) {
+                    if(ouftn.getIcon() != null) {
+                        renderer.setIcon(ouftn.getIcon());
+                    }
+                    renderer.setText(ouftn.getName());
+                    if (ouftn.getOrganisationId() == null && ouftn.getFolderId() == null && ouftn.getCollectionId() == null && ! ouftn.isUnnamedFolder()) {
+                        renderer.setForeground(Color.DARK_GRAY);
+                        plainFont = false;
+                    }
+                }
+                if(plainFont) {
+                    renderer.setFont(renderer.getFont().deriveFont(Font.PLAIN));
+                } else {
+                    renderer.setFont(renderer.getFont().deriveFont(Font.ITALIC));
+                }
+                return renderer;
+            }
+        });
+        passwordListGroupSelector.getSelectionModel().addTreeSelectionListener(new TreeSelectionListener() {
+            @Override
+            public void valueChanged(TreeSelectionEvent tse) {
+                List<OUFolderTreeNode> selectedNodes = new LinkedList<>();
+                selectedNodes.addAll(
+                        ofNullable(passwordListGroupSelector.getSelectionPaths())
+                        .flatMap(array -> stream(array))
+                        .map(treePath -> (OUFolderTreeNode) treePath.getLastPathComponent())
+                        .collect(Collectors.toList()));
+                selectedCollections.clear();
+                selectedFolders.clear();
+                selectedOrganizations.clear();
+                selectedUnnamedFolder = false;
+                selectedNodes.forEach(ouftn -> {
+                    if(ouftn.getOrganisationId() != null) {
+                        selectedOrganizations.add(ouftn.getOrganisationId());
+                    }
+                    if(ouftn.getFolderId() != null) {
+                        selectedFolders.add(ouftn.getFolderId());
+                    }
+                    if(ouftn.getCollectionId() != null) {
+                        selectedCollections.add(ouftn.getCollectionId());
+                    }
+                    selectedUnnamedFolder |= ouftn.isUnnamedFolder();
+                });
                 updateFilteredList();
             }
         });
@@ -235,17 +306,90 @@ public class PasswordListPanel extends javax.swing.JPanel {
                 (sd) -> {
                     cipherList = sd.getCiphers();
                     cipherList.sort(Comparator.nullsFirst(Comparator.comparing(c -> c.getName())));
+                    TreeNode rootNode = buildSelectionNode(sd);
+                    passwordListGroupModel.setRoot(rootNode);
+                    Consumer<TreePath> pathExpander = new Consumer<TreePath>() {
+                        @Override
+                        public void accept(TreePath path) {
+                            passwordListGroupSelector.expandPath(path);
+                            ((TreeNode) path.getLastPathComponent())
+                                    .children()
+                                    .asIterator()
+                                    .forEachRemaining(tn -> {
+                                        TreePath childPath = path.pathByAddingChild(tn);
+                                        accept(childPath);
+                                    });
+                        }
+                    };
+                    pathExpander.accept(new TreePath(rootNode));
                     updateFilteredList();
                 },
                 (ex) -> {
+                    LOG.log(System.Logger.Level.WARNING, "Failed to parse sync data", ex);
                 }
         );
     }
 
+    private OUFolderTreeNode buildSelectionNode(DecryptedSyncData dsd) {
+        OUFolderTreeNode rootNode = new OUFolderTreeNode(null, "Filter", null);
+        OUFolderTreeNode foldersNode = new OUFolderTreeNode(rootNode, "Folders", FOLDER_ICON);
+        foldersNode.setUnnamedFolder(true);
+        OUFolderTreeNode collectionsNode = new OUFolderTreeNode(rootNode, "Organisations", OFFICE_BUILDING_ICON);
+        Map<String, OUFolderTreeNode> folderNodes = new HashMap<>();
+        folderNodes.put("", foldersNode);
+        dsd.getFolder().forEach(df -> {
+            String[] path = df.getName().split("/");
+            String pathCombined = "";
+            for(int i = 0; i < path.length; i++) {
+                OUFolderTreeNode parentNode = folderNodes.get(pathCombined);
+                String folderName = path[i];
+                pathCombined = pathCombined + "/" + folderName;
+                if (!folderNodes.containsKey(pathCombined)) {
+                    OUFolderTreeNode folderNode = new OUFolderTreeNode(parentNode, folderName, FOLDER_ICON);
+                    folderNodes.put(pathCombined, folderNode);
+                }
+                if(i == path.length - 1) {
+                    folderNodes.get(pathCombined).setFolderId(df.getId());
+                }
+            }
+        });
+        Map<String, OUFolderTreeNode> collectionNodes = new HashMap<>();
+        dsd.getOrganizationNames().entrySet().forEach(e -> {
+            OUFolderTreeNode organizationNode = new OUFolderTreeNode(collectionsNode, e.getValue(), OFFICE_BUILDING_ICON);
+            organizationNode.setOrganisationId(e.getKey());
+            collectionNodes.put(e.getKey(), organizationNode);
+        });
+        dsd.getCollections().forEach(dc -> {
+            String[] path = dc.getName().split("/");
+            OUFolderTreeNode parentNode = collectionNodes.get(dc.getOrganizationId());
+            String pathCombined = dc.getOrganizationId();
+            for (String collectionName : path) {
+                pathCombined = pathCombined + "/" + collectionName;
+                if (!collectionNodes.containsKey(pathCombined)) {
+                    OUFolderTreeNode collectionNode = new OUFolderTreeNode(parentNode, collectionName, SELECT_GROUP_ICON);
+                    collectionNodes.put(pathCombined, collectionNode);
+                    parentNode = collectionNode;
+                } else {
+                    parentNode = collectionNodes.get(pathCombined);
+                }
+            }
+            parentNode.setCollectionId(dc.getId());
+        });
+        return rootNode;
+    }
+
     private void updateFilteredList() {
-        String filterText = passwordListFilter.getText().toLowerCase();
+        String filterText = passwordListQuickFilter.getText().toLowerCase();
         String selectedId = decryptedCipherData != null ? decryptedCipherData.getId() : null;
-        List<DecryptedCipherData> filteredList = cipherList.stream().filter(dcd -> dcd.getName().toLowerCase().contains(filterText)).toList();
+        List<DecryptedCipherData> filteredList = cipherList.stream().filter(dcd -> {
+            return dcd.getName().toLowerCase().contains(filterText) && (
+                    (selectedCollections.isEmpty() && selectedFolders.isEmpty() && selectedOrganizations.isEmpty() && ! selectedUnnamedFolder)
+                    || selectedOrganizations.contains(dcd.getOrganizationId())
+                    || selectedFolders.contains(dcd.getFolderId())
+                    || ( selectedUnnamedFolder && dcd.getOrganizationId() == null && dcd.getFolderId() == null)
+                    || dcd.getCollectionIds().stream().anyMatch(c -> selectedCollections.contains(c))
+            );
+        }).toList();
         passwordListModel.removeAllElements();
         passwordListModel.addAll(filteredList);
         DecryptedCipherData newSelected;
@@ -505,8 +649,11 @@ public class PasswordListPanel extends javax.swing.JPanel {
         java.awt.GridBagConstraints gridBagConstraints;
 
         passwordListWrapper = new javax.swing.JSplitPane();
-        passwordListPanel = new javax.swing.JPanel();
-        passwordListFilter = new javax.swing.JTextField();
+        passwordListPanel = new javax.swing.JSplitPane();
+        passwordListFilterPanel = new javax.swing.JPanel();
+        passwordListQuickFilter = new javax.swing.JTextField();
+        passwordListGroupSelectorWrapper = new javax.swing.JScrollPane();
+        passwordListGroupSelector = new javax.swing.JTree();
         passwordListScrollPane = new javax.swing.JScrollPane();
         passwordList = new javax.swing.JList<>();
         selectEntryPanel = new javax.swing.JPanel();
@@ -552,7 +699,9 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
         passwordListWrapper.setDividerLocation(250);
 
-        passwordListPanel.setLayout(new java.awt.GridBagLayout());
+        passwordListPanel.setResizeWeight(0.5);
+
+        passwordListFilterPanel.setLayout(new java.awt.GridBagLayout());
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
@@ -560,10 +709,10 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 0, 5);
-        passwordListPanel.add(passwordListFilter, gridBagConstraints);
+        passwordListFilterPanel.add(passwordListQuickFilter, gridBagConstraints);
 
-        passwordList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        passwordListScrollPane.setViewportView(passwordList);
+        passwordListGroupSelector.setModel(passwordListGroupModel);
+        passwordListGroupSelectorWrapper.setViewportView(passwordListGroupSelector);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -572,7 +721,14 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.weighty = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
-        passwordListPanel.add(passwordListScrollPane, gridBagConstraints);
+        passwordListFilterPanel.add(passwordListGroupSelectorWrapper, gridBagConstraints);
+
+        passwordListPanel.setLeftComponent(passwordListFilterPanel);
+
+        passwordList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        passwordListScrollPane.setViewportView(passwordList);
+
+        passwordListPanel.setRightComponent(passwordListScrollPane);
 
         passwordListWrapper.setLeftComponent(passwordListPanel);
 
@@ -952,8 +1108,11 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private javax.swing.JPasswordField passwordField;
     private javax.swing.JLabel passwordLabel;
     private javax.swing.JList<DecryptedCipherData> passwordList;
-    private javax.swing.JTextField passwordListFilter;
-    private javax.swing.JPanel passwordListPanel;
+    private javax.swing.JPanel passwordListFilterPanel;
+    private javax.swing.JTree passwordListGroupSelector;
+    private javax.swing.JScrollPane passwordListGroupSelectorWrapper;
+    private javax.swing.JSplitPane passwordListPanel;
+    private javax.swing.JTextField passwordListQuickFilter;
     private javax.swing.JScrollPane passwordListScrollPane;
     private javax.swing.JSplitPane passwordListWrapper;
     private javax.swing.JPanel passwordPanel;

@@ -29,7 +29,9 @@ public record CipherData(
         LoginData login,
         @JsonProperty("sshKey")
         SshKey sshKey,
-        List<FieldData> fields
+        List<FieldData> fields,
+        String folderId,
+        List<String> collectionIds
         ) {
 
 }

@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.glassfish.jersey.client.JerseyClientBuilder;
+import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
 import org.glassfish.jersey.logging.LoggingFeature;
 
 import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Initial;
@@ -85,7 +86,7 @@ public class BitwardenClient implements Closeable {
         public void stateChanged(State oldState, State newState);
     }
 
-    private final static ObjectMapper objectMapper = new ObjectMapper();
+    private final static ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final List<StateObserver> stateObserver = new CopyOnWriteArrayList<>();
     private final Client client;
     private final Path configPath;
@@ -107,6 +108,7 @@ public class BitwardenClient implements Closeable {
                 .connectTimeout(2, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
                 .register(new LoggingFeature(Logger.getLogger(BitwardenClient.class.getName()), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY, 65535))
+                .register(new JacksonJsonProvider(objectMapper))
                 .build();
         configPath = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
                 ? Path.of(System.getenv("APPDATA"), "BitwardenAgent", "state.json")
@@ -252,57 +254,84 @@ public class BitwardenClient implements Closeable {
         localSyncData.profile().organizations().forEach(od -> {
             result.getOrganizationNames().put(od.id(), od.name());
         });
-        localSyncData.ciphers()
-                .stream()
-                .forEach(cd -> {
-                    try {
-                        DecryptedCipherData dcd = new DecryptedCipherData();
-                        dcd.setName(decryptString(localUserKey, localOrganizationKeys, cd, cd.name()));
-                        dcd.setId(cd.id());
-                        dcd.setOrganizationId(cd.organizationId());
-                        if(cd.organizationId() != null) {
-                            dcd.setOrganization(result.getOrganizationNames().get(cd.organizationId()));
-                        }
-                        if (cd.login() != null) {
-                            DecryptedLoginData dld = new DecryptedLoginData();
-                            dld.setPassword(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().password()));
-                            dld.setTotp(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().totp()));
-                            dld.setUri(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().uri()));
-                            dld.setUsername(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().username()));
-                            if(cd.login().uris() != null) {
-                                for(UriData ud: cd.login().uris()) {
-                                    DecryptedUriData dud = new DecryptedUriData();
-                                    dud.setMatch(ud.match());
-                                    dud.setUri(decryptString(localUserKey, localOrganizationKeys, cd, ud.uri()));
-                                    dud.setUriChecksum(decryptString(localUserKey, localOrganizationKeys, cd, ud.uriChecksum()));
-                                    dld.getUriData().add(dud);
-                                };
-                            }
-                            dcd.setLogin(dld);
-                        }
-                        if (cd.sshKey() != null) {
-                            DecryptedSshKey dsk = new DecryptedSshKey();
-                            dsk.setKeyFingerprint(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().keyFingerprint()));
-                            dsk.setPrivateKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().privateKey()));
-                            dsk.setPublicKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().publicKey()));
-                            dcd.setSshKey(dsk);
-                        }
-                        dcd.setNotes(decryptString(localUserKey, localOrganizationKeys, cd, cd.notes()));
-                        if(cd.fields() != null) {
-                            for (FieldData fd : cd.fields()) {
-                                DecryptedFieldData dfd = new DecryptedFieldData();
-                                dfd.setLinkedId(fd.linkedId());
-                                dfd.setType(fd.type());
-                                dfd.setName(decryptString(localUserKey, localOrganizationKeys, cd, fd.name()));
-                                dfd.setValue(decryptString(localUserKey, localOrganizationKeys, cd, fd.value()));
-                                dcd.getFields().add(dfd);
-                            }
-                        }
-                        result.getCiphers().add(dcd);
-                    } catch (Exception ex) {
-                        System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        localSyncData.ciphers().forEach(cd -> {
+            try {
+                DecryptedCipherData dcd = new DecryptedCipherData();
+                dcd.setName(decryptString(localUserKey, localOrganizationKeys, cd, cd.name()));
+                dcd.setId(cd.id());
+                dcd.setOrganizationId(cd.organizationId());
+                dcd.setFolderId(cd.folderId());
+                if (cd.collectionIds() != null) {
+                    dcd.getCollectionIds().addAll(cd.collectionIds());
+                }
+                if (cd.organizationId() != null) {
+                    dcd.setOrganization(result.getOrganizationNames().get(cd.organizationId()));
+                }
+                if (cd.login() != null) {
+                    DecryptedLoginData dld = new DecryptedLoginData();
+                    dld.setPassword(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().password()));
+                    dld.setTotp(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().totp()));
+                    dld.setUri(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().uri()));
+                    dld.setUsername(decryptString(localUserKey, localOrganizationKeys, cd, cd.login().username()));
+                    if (cd.login().uris() != null) {
+                        for (UriData ud : cd.login().uris()) {
+                            DecryptedUriData dud = new DecryptedUriData();
+                            dud.setMatch(ud.match());
+                            dud.setUri(decryptString(localUserKey, localOrganizationKeys, cd, ud.uri()));
+                            dud.setUriChecksum(decryptString(localUserKey, localOrganizationKeys, cd, ud.uriChecksum()));
+                            dld.getUriData().add(dud);
+                        };
                     }
-                });
+                    dcd.setLogin(dld);
+                }
+                if (cd.sshKey() != null) {
+                    DecryptedSshKey dsk = new DecryptedSshKey();
+                    dsk.setKeyFingerprint(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().keyFingerprint()));
+                    dsk.setPrivateKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().privateKey()));
+                    dsk.setPublicKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().publicKey()));
+                    dcd.setSshKey(dsk);
+                }
+                dcd.setNotes(decryptString(localUserKey, localOrganizationKeys, cd, cd.notes()));
+                if (cd.fields() != null) {
+                    for (FieldData fd : cd.fields()) {
+                        DecryptedFieldData dfd = new DecryptedFieldData();
+                        dfd.setLinkedId(fd.linkedId());
+                        dfd.setType(fd.type());
+                        dfd.setName(decryptString(localUserKey, localOrganizationKeys, cd, fd.name()));
+                        dfd.setValue(decryptString(localUserKey, localOrganizationKeys, cd, fd.value()));
+                        dcd.getFields().add(dfd);
+                    }
+                }
+                result.getCiphers().add(dcd);
+            } catch (Exception ex) {
+                System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+        });
+        localSyncData.folders().forEach(f -> {
+            try {
+                DecryptedFolder df = new DecryptedFolder();
+                df.setId(f.id());
+                df.setName(UtilCryto.decryptString(localUserKey, f.name()));
+                df.setRevisionDate(f.revisionDate());
+                result.getFolder().add(df);
+            } catch (Exception ex) {
+                System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+        });
+        localSyncData.collections().forEach(c -> {
+            try {
+                DecryptedCollection dc = new DecryptedCollection();
+                dc.setId(c.id());
+                dc.setOrganizationId(c.organizationId());
+                dc.setName(decryptString(localOrganizationKeys, c.organizationId(), c.name()));
+                dc.setHidePasswords(c.hidePasswords());
+                dc.setManage(c.manage());
+                result.getCollections().add(dc);
+            } catch (Exception ex) {
+                System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+        });
+
         return result;
     }
 
@@ -317,6 +346,11 @@ public class BitwardenClient implements Closeable {
         } else {
             ek = organizationKeys.get(cd.organizationId());
         }
+        return UtilCryto.decryptString(ek, encryptedString);
+    }
+
+    public static String decryptString(Map<String, EncryptionKey> organizationKeys, String organizationId, String encryptedString) throws GeneralSecurityException {
+        EncryptionKey ek = organizationKeys.get(organizationId);
         return UtilCryto.decryptString(ek, encryptedString);
     }
 

@@ -15,7 +15,6 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
-import eu.doppelhelix.app.bitwardenagent.http.FieldData;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,7 +29,9 @@ public class DecryptedCipherData {
     private String notes;
     private final List<DecryptedFieldData> fields = new ArrayList<> ();
     private String folderId;
+    private String folder;
     private final List<String> collectionIds = new ArrayList<>();
+    private final List<String> collections = new ArrayList<>();
 
     public DecryptedCipherData() {
     }
@@ -105,6 +106,18 @@ public class DecryptedCipherData {
 
     public List<String> getCollectionIds() {
         return collectionIds;
+    }
+
+    public String getFolder() {
+        return folder;
+    }
+
+    public void setFolder(String folder) {
+        this.folder = folder;
+    }
+
+    public List<String> getCollections() {
+        return collections;
     }
 
 }

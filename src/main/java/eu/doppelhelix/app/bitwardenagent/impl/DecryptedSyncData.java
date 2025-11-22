@@ -26,6 +26,8 @@ public class DecryptedSyncData {
     private String email;
     private String name;
     private final Map<String, String> organizationNames = new HashMap<>();
+    private final Map<String, String> folderNames = new HashMap<>();
+    private final Map<String, String> collectionNames = new HashMap<>();
     private final List<DecryptedCipherData> ciphers = new ArrayList<>();
     private final List<DecryptedCollection> collections = new ArrayList<>();
     private final List<DecryptedFolder> folder = new ArrayList<>();
@@ -56,6 +58,14 @@ public class DecryptedSyncData {
 
     public Map<String, String> getOrganizationNames() {
         return organizationNames;
+    }
+
+    public Map<String, String> getFolderNames() {
+        return folderNames;
+    }
+
+    public Map<String, String> getCollectionNames() {
+        return collectionNames;
     }
 
     public List<DecryptedCipherData> getCiphers() {

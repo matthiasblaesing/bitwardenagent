@@ -40,11 +40,9 @@ import java.awt.Insets;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -422,12 +420,30 @@ public class PasswordListPanel extends javax.swing.JPanel {
         sshFingerprintField.setText("");
         showLoginFields(false);
         showSshFields(false);
-        organizationTitle.setText(emptyNullToSpace(null));
+        for(Component c: locationInfoWrapper.getComponents()) {
+            if(c != locationInfoPlaceholder) {
+                locationInfoWrapper.remove(c);
+            }
+        }
         passwordTitle.setText(emptyNullToSpace(null));
         if (this.decryptedCipherData != null) {
             idField.setText(decryptedCipherData.getId());
             passwordTitle.setText(emptyNullToSpace(decryptedCipherData.getName()));
-            organizationTitle.setText(emptyNullToSpace(decryptedCipherData.getOrganization()));
+            if(decryptedCipherData.getFolder() != null && ! decryptedCipherData.getFolder().isBlank()) {
+                JLabel label = new JLabel(decryptedCipherData.getFolder(), FOLDER_ICON, JLabel.LEADING);
+                label.setFont(label.getFont().deriveFont(Font.ITALIC));
+                locationInfoWrapper.add(label, locationInfoWrapper.getComponents().length - 1);
+            }
+            if(decryptedCipherData.getOrganization() != null && ! decryptedCipherData.getOrganization().isBlank()) {
+                JLabel label = new JLabel(decryptedCipherData.getOrganization(), OFFICE_BUILDING_ICON, JLabel.LEADING);
+                label.setFont(label.getFont().deriveFont(Font.ITALIC));
+                locationInfoWrapper.add(label, locationInfoWrapper.getComponents().length - 1);
+            }
+            for (String collection : decryptedCipherData.getCollections()) {
+                JLabel label = new JLabel(collection, SELECT_GROUP_ICON, JLabel.LEADING);
+                label.setFont(label.getFont().deriveFont(Font.ITALIC));
+                locationInfoWrapper.add(label);
+            }
             notesField.setText(decryptedCipherData.getNotes());
             if(decryptedCipherData.getLogin() != null) {
                 showLoginFields(true);
@@ -661,6 +677,8 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordPanelScrollPane = new javax.swing.JScrollPane();
         passwordPanel = new javax.swing.JPanel();
         passwordTitle = new javax.swing.JLabel();
+        locationInfoWrapper = new javax.swing.JPanel();
+        locationInfoPlaceholder = new javax.swing.JLabel();
         idLabel = new javax.swing.JLabel();
         idField = new javax.swing.JTextField();
         usernameLabel = new javax.swing.JLabel();
@@ -668,7 +686,6 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordLabel = new javax.swing.JLabel();
         passwordField = new javax.swing.JPasswordField();
         passwordVisible = new javax.swing.JToggleButton();
-        organizationTitle = new javax.swing.JLabel();
         copyIdButton = new javax.swing.JButton();
         copyUsernameButton = new javax.swing.JButton();
         copyPasswordButton = new javax.swing.JButton();
@@ -752,6 +769,24 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(passwordTitle, gridBagConstraints);
 
+        java.awt.FlowLayout flowLayout1 = new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 5, 0);
+        flowLayout1.setAlignOnBaseline(true);
+        locationInfoWrapper.setLayout(flowLayout1);
+
+        locationInfoPlaceholder.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        locationInfoPlaceholder.setText(" ");
+        locationInfoPlaceholder.setToolTipText("");
+        locationInfoWrapper.add(locationInfoPlaceholder);
+
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridwidth = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 5);
+        passwordPanel.add(locationInfoWrapper, gridBagConstraints);
+
         idLabel.setText("ID:");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -825,16 +860,6 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(passwordVisible, gridBagConstraints);
-
-        organizationTitle.setFont(organizationTitle.getFont().deriveFont((organizationTitle.getFont().getStyle() | java.awt.Font.ITALIC)));
-        organizationTitle.setText("<organization>");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 1;
-        gridBagConstraints.gridwidth = 4;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
-        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
-        passwordPanel.add(organizationTitle, gridBagConstraints);
 
         copyIdButton.setIcon(COPY_ICON);
         copyIdButton.setMaximumSize(new java.awt.Dimension(24, 24));
@@ -1101,10 +1126,11 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private javax.swing.Box.Filler fillerTrailing;
     private javax.swing.JTextField idField;
     private javax.swing.JLabel idLabel;
+    private javax.swing.JLabel locationInfoPlaceholder;
+    private javax.swing.JPanel locationInfoWrapper;
     private javax.swing.JTextArea notesField;
     private javax.swing.JLabel notesLabel;
     private javax.swing.JScrollPane notesScrollPane;
-    private javax.swing.JLabel organizationTitle;
     private javax.swing.JPasswordField passwordField;
     private javax.swing.JLabel passwordLabel;
     private javax.swing.JList<DecryptedCipherData> passwordList;

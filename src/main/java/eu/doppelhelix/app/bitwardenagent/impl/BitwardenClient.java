@@ -50,6 +50,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
 import org.glassfish.jersey.logging.LoggingFeature;
@@ -254,6 +255,20 @@ public class BitwardenClient implements Closeable {
         localSyncData.profile().organizations().forEach(od -> {
             result.getOrganizationNames().put(od.id(), od.name());
         });
+        localSyncData.collections().forEach(c -> {
+            try {
+                result.getCollectionNames().put(c.id(), decryptString(organizationKeys, c.organizationId(), c.name()));
+            } catch (GeneralSecurityException ex) {
+                System.getLogger(BitwardenClient.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+        });
+        localSyncData.folders().forEach(f -> {
+            try {
+                result.getFolderNames().put(f.id(), UtilCryto.decryptString(userKey, f.name()));
+            } catch (GeneralSecurityException ex) {
+                System.getLogger(BitwardenClient.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+        });
         localSyncData.ciphers().forEach(cd -> {
             try {
                 DecryptedCipherData dcd = new DecryptedCipherData();
@@ -261,8 +276,18 @@ public class BitwardenClient implements Closeable {
                 dcd.setId(cd.id());
                 dcd.setOrganizationId(cd.organizationId());
                 dcd.setFolderId(cd.folderId());
+                if(dcd.getFolderId() != null && result.getFolderNames().containsKey(dcd.getFolderId())) {
+                    dcd.setFolder(result.getFolderNames().get(dcd.getFolderId()));
+                }
                 if (cd.collectionIds() != null) {
                     dcd.getCollectionIds().addAll(cd.collectionIds());
+                    dcd.getCollections().addAll(
+                            cd.collectionIds()
+                                    .stream()
+                                    .map(ci -> result.getCollectionNames().get(ci))
+                                    .filter(cn -> cn != null)
+                                    .collect(Collectors.toList())
+                    );
                 }
                 if (cd.organizationId() != null) {
                     dcd.setOrganization(result.getOrganizationNames().get(cd.organizationId()));

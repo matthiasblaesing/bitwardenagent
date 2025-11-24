@@ -15,6 +15,7 @@
  */
 package eu.doppelhelix.app.bitwardenagent.server;
 
+import eu.doppelhelix.app.bitwardenagent.Configuration;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.TOTPUtil;
 import java.io.IOException;
@@ -27,11 +28,16 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ACCESS;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 
@@ -42,6 +48,7 @@ public class UnixDomainSocketServer extends Thread {
     private final Executor executor = Executors.newWorkStealingPool(10);
     private final Path socketDirectory;
     private final BitwardenClient bitwardenClient;
+    private Set<String> allowAccess = Collections.synchronizedSet(new HashSet<>());
     private ServerSocketChannel listenChannel;
 
     public UnixDomainSocketServer(BitwardenClient bitwardenClient) {
@@ -50,6 +57,13 @@ public class UnixDomainSocketServer extends Thread {
         this.socketDirectory = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
                 ? Path.of(System.getenv("LOCALAPPDATA"), "BitwardenAgent", "sockets")
                 : Path.of(System.getenv("HOME"), ".cache/BitwardenAgent", "sockets");
+        allowAccess.addAll(Configuration.getConfiguration().getAllowAccess());
+        Configuration.getConfiguration().addObserver((name, value) -> {
+            if (PROP_ALLOW_ACCESS.equals(name)) {
+                allowAccess.addAll((Collection<String>) value);
+                allowAccess.retainAll((Collection<String>) value);
+            }
+        });
     }
 
     public void shutdown() throws IOException {
@@ -83,21 +97,27 @@ public class UnixDomainSocketServer extends Thread {
                             String input = new String(bb.array(), 0, bb.limit());
                             String[] target = input.trim().split("/", 2);
                             String id = target[0];
-                            String attribute = target[1];
-                            String result = bitwardenClient.getSyncData()
-                                    .getCiphers()
-                                    .stream()
-                                    .filter(dcd -> Objects.equals(id, dcd.getId()))
-                                    .findFirst()
-                                    .map(dcd -> 
-                                        switch(attribute) {
-                                            case "username" -> dcd.getLogin().getUsername();
-                                            case "password" -> dcd.getLogin().getPassword();
-                                            case "totpToken" -> TOTPUtil.calculateTOTP(dcd.getLogin().getTotp());
-                                            default -> "-";
-                                        }
-                                    )
-                                    .orElse("-");
+                            String result = "";
+                            if (allowAccess.contains(id) || Configuration.getConfiguration().isAllowAllAccess()) {
+                                String attribute = target[1];
+                                result = bitwardenClient.getSyncData()
+                                        .getCiphers()
+                                        .stream()
+                                        .filter(dcd -> Objects.equals(id, dcd.getId()))
+                                        .findFirst()
+                                        .map(dcd -> switch (attribute) {
+                                                    case "username" ->
+                                                        dcd.getLogin().getUsername();
+                                                    case "password" ->
+                                                        dcd.getLogin().getPassword();
+                                                    case "totpToken" ->
+                                                        TOTPUtil.calculateTOTP(dcd.getLogin().getTotp());
+                                                    default ->
+                                                        "-";
+                                                }
+                                        )
+                                        .orElse("-");
+                            }
                             bb.clear();
                             bb.put(result.getBytes(UTF_8));
                             bb.put("\n".getBytes(UTF_8));

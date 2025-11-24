@@ -20,18 +20,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Configuration {
     private static final System.Logger LOG = System.getLogger(Configuration.class.getName());
-
     private static final Configuration INSTANCE = new Configuration();
+
+    public static final String PROP_START_UNIX_DOMAIN_SOCKET_SERVER = "startUnixDomainSocketServer";
+    public static final String PROP_ALLOW_ALL_ACCESS = "allowAllAccess";
+    public static final String PROP_ALLOW_ACCESS = "allowAccess";
 
     public static Configuration getConfiguration() {
         return INSTANCE;
@@ -61,16 +69,58 @@ public class Configuration {
     }
 
     public void setStartUnixDomainSocketServer(boolean value) {
-        configData.put("startUnixDomainSocketServer", value);
+        configData.put(PROP_START_UNIX_DOMAIN_SOCKET_SERVER, value);
         writeConfig();
-        this.observer.forEach(co -> co.updatedValue("startUnixDomainSocketServer", value));
+        this.observer.forEach(co -> co.updatedValue(PROP_START_UNIX_DOMAIN_SOCKET_SERVER, value));
     }
 
     public boolean isStartUnixDomainSocketServer() {
         try {
-            return (boolean) configData.getOrDefault("startUnixDomainSocketServer", false);
+            return (boolean) configData.getOrDefault(PROP_START_UNIX_DOMAIN_SOCKET_SERVER, false);
         } catch (ClassCastException ex) {
             return false;
+        }
+    }
+
+    public void setAllowAllAccess(boolean value) {
+        configData.put(PROP_ALLOW_ALL_ACCESS, value);
+        writeConfig();
+        this.observer.forEach(co -> co.updatedValue(PROP_ALLOW_ALL_ACCESS, value));
+    }
+
+    public boolean isAllowAllAccess() {
+        try {
+            return (boolean) configData.getOrDefault(PROP_ALLOW_ALL_ACCESS, false);
+        } catch (ClassCastException ex) {
+            return false;
+        }
+    }
+
+    public void addAllowAccess(String id) {
+        Set<String> write = new HashSet<>(getAllowAccess());
+        write.add(id);
+        updateAllowAccess(write);
+    }
+
+    public void removeAllowAccess(String id) {
+        Set<String> write = new HashSet<>(getAllowAccess());
+        write.remove(id);
+        updateAllowAccess(write);
+    }
+
+    private void updateAllowAccess(Set<String> newSet) {
+        List<String> data = new ArrayList<>(newSet);
+        List<String> roData = Collections.unmodifiableList(data);
+        configData.put(PROP_ALLOW_ACCESS, data);
+        writeConfig();
+        this.observer.forEach(co -> co.updatedValue(PROP_ALLOW_ACCESS, roData));
+    }
+
+    public Collection<String> getAllowAccess() {
+        try {
+            return Collections.unmodifiableList((List<String>) configData.getOrDefault(PROP_ALLOW_ACCESS, Collections.emptyList()));
+        } catch (ClassCastException ex) {
+            return Collections.emptyList();
         }
     }
 

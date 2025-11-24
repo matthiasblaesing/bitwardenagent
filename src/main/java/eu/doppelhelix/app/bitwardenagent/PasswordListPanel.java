@@ -40,6 +40,8 @@ import java.awt.Insets;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,6 +85,8 @@ import org.kordamp.ikonli.materialdesign2.MaterialDesignS;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignW;
 import org.kordamp.ikonli.swing.FontIcon;
 
+import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ACCESS;
+import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ALL_ACCESS;
 import static java.awt.GridBagConstraints.BASELINE_LEADING;
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.ofNullable;
@@ -107,6 +111,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         return fi.toImageIcon();
     }
 
+    private Set<String> allowAccess = Collections.emptySet();
     private final BitwardenClient client;
     private final DefaultListModel<DecryptedCipherData> passwordListModel = new DefaultListModel<>();
     private List<DecryptedCipherData> cipherList = List.of();
@@ -278,6 +283,25 @@ public class PasswordListPanel extends javax.swing.JPanel {
                     selectedUnnamedFolder |= ouftn.isUnnamedFolder();
                 });
                 updateFilteredList();
+            }
+        });
+        Configuration.getConfiguration().addObserver((name, value) -> {
+            if(PROP_ALLOW_ACCESS.equals(name)) {
+                allowAccess = new HashSet<>((Collection<String>) value);
+                updateAllowAccessCheckbox();
+            }
+        });
+        Configuration.getConfiguration().addObserver((name, value) -> {
+            if(PROP_ALLOW_ALL_ACCESS.equals(name)) {
+                updateAllowAccessCheckbox();
+            }
+        });
+        allowAccess = new HashSet<>(Configuration.getConfiguration().getAllowAccess());
+        allowAccessCheckbox.addActionListener(ae -> {
+            if (allowAccessCheckbox.isSelected()) {
+                Configuration.getConfiguration().addAllowAccess(decryptedCipherData.getId());
+            } else {
+                Configuration.getConfiguration().removeAllowAccess(decryptedCipherData.getId());
             }
         });
     }
@@ -483,7 +507,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         }
         updateVisiblePanel();
         updateTotpEvaluated();
-        int componentRow = 11;
+        int componentRow = 12;
         additionalComponents.forEach(c -> passwordPanel.remove(c));
 
         Insets defaultInsets = new Insets(5, 5, 5, 5);
@@ -581,6 +605,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
                 componentRow++;
             }
         }
+        updateAllowAccessCheckbox();
         revalidate();
         repaint();
         firePropertyChange("decryptedCipherData", old, this.decryptedCipherData);
@@ -653,6 +678,19 @@ public class PasswordListPanel extends javax.swing.JPanel {
         }
     }
 
+    private void updateAllowAccessCheckbox() {
+        if(Configuration.getConfiguration().isAllowAllAccess()) {
+            allowAccessCheckbox.setEnabled(false);
+            allowAccessCheckbox.setSelected(true);
+        } else if(decryptedCipherData != null) {
+            allowAccessCheckbox.setEnabled(true);
+            allowAccessCheckbox.setSelected(allowAccess.contains(decryptedCipherData.getId()));
+        } else {
+            allowAccessCheckbox.setEnabled(false);
+            allowAccessCheckbox.setSelected(false);
+        }
+    }
+
     /**
      * This method is called from within the constructor to
      * initialize the form.
@@ -711,6 +749,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copyNotes = new javax.swing.JButton();
         notesScrollPane = new javax.swing.JScrollPane();
         notesField = new javax.swing.JTextArea();
+        allowAccessCheckbox = new javax.swing.JCheckBox();
 
         setLayout(new java.awt.BorderLayout());
 
@@ -790,7 +829,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         idLabel.setText("ID:");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 2;
+        gridBagConstraints.gridy = 3;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(idLabel, gridBagConstraints);
@@ -800,7 +839,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         idField.setText("4d3be0b0-1425-4bb8-8725-b32d01134b64");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 2;
+        gridBagConstraints.gridy = 3;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -810,7 +849,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         usernameLabel.setText(bundle.getString("usernameLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 3;
+        gridBagConstraints.gridy = 4;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(usernameLabel, gridBagConstraints);
@@ -820,7 +859,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         usernameField.setText("demo@invalid");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 3;
+        gridBagConstraints.gridy = 4;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -830,7 +869,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordLabel.setText(bundle.getString("passwordLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridy = 5;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(passwordLabel, gridBagConstraints);
@@ -842,7 +881,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordField.putClientProperty("JPasswordField.cutCopyAllowed", true);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridy = 5;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -856,7 +895,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordVisible.setSelectedIcon(OPEN_EYE_ICON);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridy = 5;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(passwordVisible, gridBagConstraints);
@@ -867,7 +906,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copyIdButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 2;
+        gridBagConstraints.gridy = 3;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copyIdButton, gridBagConstraints);
@@ -879,7 +918,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copyUsernameButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 3;
+        gridBagConstraints.gridy = 4;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copyUsernameButton, gridBagConstraints);
@@ -891,7 +930,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copyPasswordButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridy = 5;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copyPasswordButton, gridBagConstraints);
@@ -912,7 +951,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         totpLabel.setText(bundle.getString("totpLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 5;
+        gridBagConstraints.gridy = 6;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(totpLabel, gridBagConstraints);
@@ -923,7 +962,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         totpField.putClientProperty("JPasswordField.cutCopyAllowed", true);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 5;
+        gridBagConstraints.gridy = 6;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -935,7 +974,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         totpEvaluatedField.setText("123456");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 6;
+        gridBagConstraints.gridy = 7;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -948,7 +987,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copyTotpButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 5;
+        gridBagConstraints.gridy = 6;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copyTotpButton, gridBagConstraints);
@@ -960,7 +999,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         totpVisibleButton.setSelectedIcon(OPEN_EYE_ICON);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 5;
+        gridBagConstraints.gridy = 6;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(totpVisibleButton, gridBagConstraints);
@@ -971,7 +1010,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copyTotpEvaluatedButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 6;
+        gridBagConstraints.gridy = 7;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copyTotpEvaluatedButton, gridBagConstraints);
@@ -979,7 +1018,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         sshPrivateKeyLabel.setText(bundle.getString("sshPrivateKeyLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 7;
+        gridBagConstraints.gridy = 8;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(sshPrivateKeyLabel, gridBagConstraints);
@@ -987,7 +1026,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         sshPublicKeyLabel.setText(bundle.getString("sshPublicKeyLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 8;
+        gridBagConstraints.gridy = 9;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(sshPublicKeyLabel, gridBagConstraints);
@@ -995,7 +1034,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         sshFingerprintLabel.setText(bundle.getString("sshFingerprintLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 9;
+        gridBagConstraints.gridy = 10;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(sshFingerprintLabel, gridBagConstraints);
@@ -1007,7 +1046,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 7;
+        gridBagConstraints.gridy = 8;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -1019,7 +1058,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         sshPublicKeyField.setText(" ");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 8;
+        gridBagConstraints.gridy = 9;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -1031,7 +1070,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         sshFingerprintField.setText(" ");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 9;
+        gridBagConstraints.gridy = 10;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -1044,7 +1083,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copySshPrivateKey.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 7;
+        gridBagConstraints.gridy = 8;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copySshPrivateKey, gridBagConstraints);
@@ -1055,7 +1094,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copySshPublicKey.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 8;
+        gridBagConstraints.gridy = 9;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copySshPublicKey, gridBagConstraints);
@@ -1066,7 +1105,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copySshFingerprint.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 9;
+        gridBagConstraints.gridy = 10;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copySshFingerprint, gridBagConstraints);
@@ -1074,7 +1113,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         notesLabel.setText(bundle.getString("notesLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 10;
+        gridBagConstraints.gridy = 11;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(notesLabel, gridBagConstraints);
@@ -1085,7 +1124,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         copyNotes.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 10;
+        gridBagConstraints.gridy = 11;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copyNotes, gridBagConstraints);
@@ -1097,12 +1136,22 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 10;
+        gridBagConstraints.gridy = 11;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(notesScrollPane, gridBagConstraints);
+
+        allowAccessCheckbox.setText(bundle.getString("allowAccessCheckbox")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.gridwidth = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(allowAccessCheckbox, gridBagConstraints);
 
         passwordPanelScrollPane.setViewportView(passwordPanel);
 
@@ -1113,6 +1162,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JCheckBox allowAccessCheckbox;
     private javax.swing.JButton copyIdButton;
     private javax.swing.JButton copyNotes;
     private javax.swing.JButton copyPasswordButton;

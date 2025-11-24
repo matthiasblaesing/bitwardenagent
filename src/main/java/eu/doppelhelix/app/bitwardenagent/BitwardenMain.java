@@ -42,6 +42,9 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
+import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ALL_ACCESS;
+import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_START_UNIX_DOMAIN_SOCKET_SERVER;
+
 /**
  * Client for Bitwarden Systems
  */
@@ -122,10 +125,22 @@ public class BitwardenMain {
             enableServer.setState(Configuration.getConfiguration().isStartUnixDomainSocketServer());
             enableServerReference.set(enableServer);
             JMenu fileMenu = new JMenu(RESOURCE_BUNDLE.getString("menuItem.file"));
+            JCheckBoxMenuItem allowAllAccess = new JCheckBoxMenuItem(RESOURCE_BUNDLE.getString("menuItem.allowAllAccess"));
+            allowAllAccess.addActionListener(ae -> {
+                boolean newState = !Configuration.getConfiguration().isAllowAllAccess();
+                Configuration.getConfiguration().setAllowAllAccess(newState);
+            });
+            Configuration.getConfiguration().addObserver((name, value) -> {
+                if(PROP_ALLOW_ALL_ACCESS.equals(name)) {
+                    allowAllAccess.setState((boolean) value);
+                }
+            });
+            allowAllAccess.setState(Configuration.getConfiguration().isAllowAllAccess());
             menuBar.add(fileMenu);
             fileMenu.add(refresh);
             fileMenu.addSeparator();
             fileMenu.add(enableServer);
+            fileMenu.add(allowAllAccess);
             fileMenu.addSeparator();
             fileMenu.add(exit);
             frame.setJMenuBar(menuBar);
@@ -163,7 +178,7 @@ public class BitwardenMain {
         };
 
         Configuration.getConfiguration().addObserver((name, value) -> {
-            if ("startUnixDomainSocketServer".equals(name)) {
+            if (PROP_START_UNIX_DOMAIN_SOCKET_SERVER.equals(name)) {
                 unixDomainSocketServerStarter.run();
             }
         });

@@ -15,6 +15,7 @@
  */
 package eu.doppelhelix.app.bitwardenagent.http;
 
+import jakarta.ws.rs.core.Configuration;
 import org.glassfish.jersey.client.innate.inject.NonInjectionManager;
 import org.glassfish.jersey.internal.inject.InjectionManager;
 import org.glassfish.jersey.internal.inject.InjectionManagerFactory;
@@ -23,6 +24,11 @@ public class NonInjectionManagerFactory implements InjectionManagerFactory {
 
     @Override
     public InjectionManager create(Object o) {
+        return new NonInjectionManager();
+    }
+
+    @Override
+    public InjectionManager create(Object o, Configuration c) {
         return new NonInjectionManager();
     }
 

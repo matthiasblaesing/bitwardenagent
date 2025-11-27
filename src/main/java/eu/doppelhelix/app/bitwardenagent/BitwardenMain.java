@@ -146,7 +146,7 @@ public class BitwardenMain {
             frame.setJMenuBar(menuBar);
             frame.setLayout(new BorderLayout());
             frame.add(new BitwardenMainPanel(bwClient, menuBar), BorderLayout.CENTER);
-            frame.setSize(800, 600);
+            frame.setSize(1200, 800);
             frame.setLocationByPlatform(true);
             frame.setVisible(true);
         });

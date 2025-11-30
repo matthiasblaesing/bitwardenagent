@@ -49,14 +49,21 @@ public class UnixDomainSocketServer extends Thread {
     private final Path socketDirectory;
     private final BitwardenClient bitwardenClient;
     private Set<String> allowAccess = Collections.synchronizedSet(new HashSet<>());
-    private ServerSocketChannel listenChannel;
+    private volatile ServerSocketChannel listenChannel;
 
     public UnixDomainSocketServer(BitwardenClient bitwardenClient) {
+        this(
+                bitwardenClient,
+                System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+                ? Path.of(System.getenv("LOCALAPPDATA"), "BitwardenAgent", "sockets")
+                : Path.of(System.getenv("HOME"), ".cache/BitwardenAgent", "sockets")
+        );
+    }
+
+    public UnixDomainSocketServer(BitwardenClient bitwardenClient, Path socketDirectory) {
         setDaemon(true);
         this.bitwardenClient = bitwardenClient;
-        this.socketDirectory = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
-                ? Path.of(System.getenv("LOCALAPPDATA"), "BitwardenAgent", "sockets")
-                : Path.of(System.getenv("HOME"), ".cache/BitwardenAgent", "sockets");
+        this.socketDirectory = socketDirectory;
         allowAccess.addAll(Configuration.getConfiguration().getAllowAccess());
         Configuration.getConfiguration().addObserver((name, value) -> {
             if (PROP_ALLOW_ACCESS.equals(name)) {
@@ -66,9 +73,27 @@ public class UnixDomainSocketServer extends Thread {
         });
     }
 
+    @SuppressWarnings("SleepWhileInLoop")
     public void shutdown() throws IOException {
-        if(listenChannel != null) {
+        // Ensure the mainloop was entered first, so that normal shutdown can be used
+        while(isAlive() && listenChannel == null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+                LOG.log(Level.ERROR, (String) null, ex);
+            }
+        }
+        // Close the channel established in the run method
+        if(isAlive() && listenChannel != null) {
             listenChannel.close();
+        }
+        // Wait until run runs to completion
+        while(isAlive()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+                LOG.log(Level.ERROR, (String) null, ex);
+            }
         }
     }
 

@@ -30,9 +30,6 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JDialog;
@@ -54,12 +51,6 @@ public class BitwardenMain {
     private static final System.Logger LOG = System.getLogger(BitwardenMain.class.getName());
 
     public static void main(String[] args) throws Exception {
-        Logger log = Logger.getLogger(BitwardenClient.class.getName());
-        log.setLevel(Level.FINEST);
-
-        for (Handler h : Logger.getLogger("").getHandlers()) {
-            h.setLevel(Level.ALL);
-        }
 
         BitwardenClient bwClient = new BitwardenClient();
 

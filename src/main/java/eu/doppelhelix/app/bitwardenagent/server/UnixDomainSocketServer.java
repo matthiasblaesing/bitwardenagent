@@ -40,6 +40,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ACCESS;
+import static eu.doppelhelix.app.bitwardenagent.impl.Util.isWindows;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 
@@ -56,7 +57,7 @@ public class UnixDomainSocketServer extends Thread {
     public UnixDomainSocketServer(BitwardenClient bitwardenClient) {
         this(
                 bitwardenClient,
-                System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+                isWindows()
                 ? Path.of(System.getenv("LOCALAPPDATA"), "BitwardenAgent", "sockets")
                 : Path.of(System.getenv("HOME"), ".cache/BitwardenAgent", "sockets")
         );

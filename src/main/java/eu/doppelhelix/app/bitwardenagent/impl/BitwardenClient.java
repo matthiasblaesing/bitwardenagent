@@ -41,7 +41,6 @@ import java.security.PrivateKey;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -61,6 +60,7 @@ import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Offli
 import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Started;
 import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Syncable;
 import static eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient.State.Syncing;
+import static eu.doppelhelix.app.bitwardenagent.impl.Util.isWindows;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.decryptKey;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.decryptPrivateKey;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.deriveMasterKey;
@@ -111,7 +111,7 @@ public class BitwardenClient implements Closeable {
                 .register(new LoggingFeature(Logger.getLogger(BitwardenClient.class.getName()), Level.FINE, LoggingFeature.Verbosity.PAYLOAD_ANY, 65535))
                 .register(new JacksonJsonProvider(objectMapper))
                 .build();
-        configPath = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+        configPath = isWindows()
                 ? Path.of(System.getenv("APPDATA"), "BitwardenAgent", "state.json")
                 : Path.of(System.getenv("HOME"), ".config/BitwardenAgent", "state.json");
         if (Files.exists(configPath)) {

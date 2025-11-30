@@ -328,8 +328,12 @@ public class PasswordListPanel extends javax.swing.JPanel {
                     return client.getSyncData();
                 },
                 (sd) -> {
-                    cipherList = sd.getCiphers();
-                    cipherList.sort(Comparator.nullsFirst(Comparator.comparing(c -> c.getName())));
+                    if (sd != null) {
+                        cipherList = sd.getCiphers();
+                        cipherList.sort(Comparator.nullsFirst(Comparator.comparing(c -> c.getName())));
+                    } else {
+                        cipherList = List.of();
+                    }
                     TreeNode rootNode = buildSelectionNode(sd);
                     passwordListGroupModel.setRoot(rootNode);
                     Consumer<TreePath> pathExpander = new Consumer<TreePath>() {
@@ -356,49 +360,51 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
     private OUFolderTreeNode buildSelectionNode(DecryptedSyncData dsd) {
         OUFolderTreeNode rootNode = new OUFolderTreeNode(null, "Filter", null);
-        OUFolderTreeNode foldersNode = new OUFolderTreeNode(rootNode, "Folders", FOLDER_ICON);
-        foldersNode.setUnnamedFolder(true);
-        OUFolderTreeNode collectionsNode = new OUFolderTreeNode(rootNode, "Organisations", OFFICE_BUILDING_ICON);
-        Map<String, OUFolderTreeNode> folderNodes = new HashMap<>();
-        folderNodes.put("", foldersNode);
-        dsd.getFolder().forEach(df -> {
-            String[] path = df.getName().split("/");
-            String pathCombined = "";
-            for(int i = 0; i < path.length; i++) {
-                OUFolderTreeNode parentNode = folderNodes.get(pathCombined);
-                String folderName = path[i];
-                pathCombined = pathCombined + "/" + folderName;
-                if (!folderNodes.containsKey(pathCombined)) {
-                    OUFolderTreeNode folderNode = new OUFolderTreeNode(parentNode, folderName, FOLDER_ICON);
-                    folderNodes.put(pathCombined, folderNode);
+        if(dsd != null) {
+            OUFolderTreeNode foldersNode = new OUFolderTreeNode(rootNode, "Folders", FOLDER_ICON);
+            foldersNode.setUnnamedFolder(true);
+            OUFolderTreeNode collectionsNode = new OUFolderTreeNode(rootNode, "Organisations", OFFICE_BUILDING_ICON);
+            Map<String, OUFolderTreeNode> folderNodes = new HashMap<>();
+            folderNodes.put("", foldersNode);
+            dsd.getFolder().forEach(df -> {
+                String[] path = df.getName().split("/");
+                String pathCombined = "";
+                for(int i = 0; i < path.length; i++) {
+                    OUFolderTreeNode parentNode = folderNodes.get(pathCombined);
+                    String folderName = path[i];
+                    pathCombined = pathCombined + "/" + folderName;
+                    if (!folderNodes.containsKey(pathCombined)) {
+                        OUFolderTreeNode folderNode = new OUFolderTreeNode(parentNode, folderName, FOLDER_ICON);
+                        folderNodes.put(pathCombined, folderNode);
+                    }
+                    if(i == path.length - 1) {
+                        folderNodes.get(pathCombined).setFolderId(df.getId());
+                    }
                 }
-                if(i == path.length - 1) {
-                    folderNodes.get(pathCombined).setFolderId(df.getId());
+            });
+            Map<String, OUFolderTreeNode> collectionNodes = new HashMap<>();
+            dsd.getOrganizationNames().entrySet().forEach(e -> {
+                OUFolderTreeNode organizationNode = new OUFolderTreeNode(collectionsNode, e.getValue(), OFFICE_BUILDING_ICON);
+                organizationNode.setOrganisationId(e.getKey());
+                collectionNodes.put(e.getKey(), organizationNode);
+            });
+            dsd.getCollections().forEach(dc -> {
+                String[] path = dc.getName().split("/");
+                OUFolderTreeNode parentNode = collectionNodes.get(dc.getOrganizationId());
+                String pathCombined = dc.getOrganizationId();
+                for (String collectionName : path) {
+                    pathCombined = pathCombined + "/" + collectionName;
+                    if (!collectionNodes.containsKey(pathCombined)) {
+                        OUFolderTreeNode collectionNode = new OUFolderTreeNode(parentNode, collectionName, SELECT_GROUP_ICON);
+                        collectionNodes.put(pathCombined, collectionNode);
+                        parentNode = collectionNode;
+                    } else {
+                        parentNode = collectionNodes.get(pathCombined);
+                    }
                 }
-            }
-        });
-        Map<String, OUFolderTreeNode> collectionNodes = new HashMap<>();
-        dsd.getOrganizationNames().entrySet().forEach(e -> {
-            OUFolderTreeNode organizationNode = new OUFolderTreeNode(collectionsNode, e.getValue(), OFFICE_BUILDING_ICON);
-            organizationNode.setOrganisationId(e.getKey());
-            collectionNodes.put(e.getKey(), organizationNode);
-        });
-        dsd.getCollections().forEach(dc -> {
-            String[] path = dc.getName().split("/");
-            OUFolderTreeNode parentNode = collectionNodes.get(dc.getOrganizationId());
-            String pathCombined = dc.getOrganizationId();
-            for (String collectionName : path) {
-                pathCombined = pathCombined + "/" + collectionName;
-                if (!collectionNodes.containsKey(pathCombined)) {
-                    OUFolderTreeNode collectionNode = new OUFolderTreeNode(parentNode, collectionName, SELECT_GROUP_ICON);
-                    collectionNodes.put(pathCombined, collectionNode);
-                    parentNode = collectionNode;
-                } else {
-                    parentNode = collectionNodes.get(pathCombined);
-                }
-            }
-            parentNode.setCollectionId(dc.getId());
-        });
+                parentNode.setCollectionId(dc.getId());
+            });
+        }
         return rootNode;
     }
 

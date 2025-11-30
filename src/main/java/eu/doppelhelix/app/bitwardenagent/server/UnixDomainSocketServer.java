@@ -17,6 +17,8 @@ package eu.doppelhelix.app.bitwardenagent.server;
 
 import eu.doppelhelix.app.bitwardenagent.Configuration;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
+import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCipherData;
+import eu.doppelhelix.app.bitwardenagent.impl.DecryptedFieldData;
 import eu.doppelhelix.app.bitwardenagent.impl.TOTPUtil;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
@@ -120,28 +122,21 @@ public class UnixDomainSocketServer extends Thread {
                             ch.read(bb);
                             bb.flip();
                             String input = new String(bb.array(), 0, bb.limit());
-                            String[] target = input.trim().split("/", 2);
-                            String id = target[0];
+                            String[] target = input.trim().split("/", 3);
                             String result = "";
-                            if (allowAccess.contains(id) || Configuration.getConfiguration().isAllowAllAccess()) {
-                                String attribute = target[1];
-                                result = bitwardenClient.getSyncData()
-                                        .getCiphers()
-                                        .stream()
-                                        .filter(dcd -> Objects.equals(id, dcd.getId()))
-                                        .findFirst()
-                                        .map(dcd -> switch (attribute) {
-                                                    case "username" ->
-                                                        dcd.getLogin().getUsername();
-                                                    case "password" ->
-                                                        dcd.getLogin().getPassword();
-                                                    case "totpToken" ->
-                                                        TOTPUtil.calculateTOTP(dcd.getLogin().getTotp());
-                                                    default ->
-                                                        "-";
-                                                }
-                                        )
-                                        .orElse("-");
+                            if (target.length >= 2) {
+                                String id = target[0];
+                                if (allowAccess.contains(id) || Configuration.getConfiguration().isAllowAllAccess()) {
+                                    result = bitwardenClient.getSyncData()
+                                            .getCiphers()
+                                            .stream()
+                                            .filter(dcd -> Objects.equals(id, dcd.getId()))
+                                            .findFirst()
+                                            .map(dcd -> getEntryData(dcd, target))
+                                            .orElse("-");
+                                }
+                            } else {
+                                LOG.log(Level.WARNING, "Entry does not have expected format (ENTRYID/AREA/ATTRIBUTE): {0}", input);
                             }
                             bb.clear();
                             bb.put(result.getBytes(UTF_8));
@@ -163,5 +158,56 @@ public class UnixDomainSocketServer extends Thread {
         } catch (IOException ex) {
             LOG.log(Level.ERROR, "Failed to create socket directory: " + socketDirectory, ex);
         }
+    }
+
+    private String getEntryData(DecryptedCipherData dcd, String[] target) {
+        return switch (target[1]) { // area
+            case "login" ->
+                switch (target[2]) { // detail level 1
+                    case "username" -> dcd.getLogin().getUsername();
+                    case "password" -> dcd.getLogin().getPassword();
+                    case "totp" -> dcd.getLogin().getTotp();
+                    case "totpToken" -> TOTPUtil.calculateTOTP(dcd.getLogin().getTotp());
+                    default -> "-";
+                };
+            case "sshKey" ->
+                switch (target[2]) { // detail level 1
+                    case "keyFingerprint" -> dcd.getSshKey().getKeyFingerprint();
+                    case "privateKey" -> dcd.getSshKey().getPrivateKey();
+                    case "publicKey" -> dcd.getSshKey().getPublicKey();
+                    default -> "";
+                };
+            case "notes" -> dcd.getNotes();
+            case "fields" -> {
+                DecryptedFieldData dfd = null;
+                int separator = target[2].lastIndexOf("/");
+                String fieldReference = target[2].substring(0, separator);
+                String fieldAttribute = target[2].substring(separator + 1);
+                for (DecryptedFieldData dfdCandidate : dcd.getFields()) {
+                    if(fieldReference.equals(dfdCandidate.getName())) {
+                        dfd = dfdCandidate;
+                        break;
+                    }
+                }
+                if(dfd == null) {
+                    try {
+                        int fieldIndex = Integer.parseInt(fieldReference);
+                        dfd = dcd.getFields().get(fieldIndex);
+                    } catch (NumberFormatException ex) {
+                    }
+                }
+                if(dfd == null) {
+                    yield "";
+                }
+                yield switch(fieldAttribute) {
+                    case "linkedId" -> dfd.getLinkedId().name();
+                    case "name" -> dfd.getName();
+                    case "value" -> dfd.getValue();
+                    case "type" -> dfd.getType().name();
+                    default -> "";
+                };
+            }
+            default -> "";
+        };
     }
 }

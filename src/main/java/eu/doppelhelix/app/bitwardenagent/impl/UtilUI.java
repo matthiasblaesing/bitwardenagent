@@ -19,9 +19,20 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
+import javax.swing.ImageIcon;
 import javax.swing.SwingWorker;
+import org.kordamp.ikonli.Ikon;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignF;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignO;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignS;
+import org.kordamp.ikonli.swing.FontIcon;
 
 public class UtilUI {
+
+    public static final ImageIcon FOLDER_ICON = createIcon(MaterialDesignF.FOLDER, 16);
+    public static final ImageIcon OFFICE_BUILDING_ICON = createIcon(MaterialDesignO.OFFICE_BUILDING, 16);
+    public static final ImageIcon SELECT_GROUP_ICON = createIcon(MaterialDesignS.SELECT_GROUP, 16);
+
     public static <T> void runOffTheEdt(Callable<T> runOffEdt, Consumer<T> runOnEdt, Consumer<Throwable> errorHandler) {
         new SwingWorker<T, T>() {
             @Override
@@ -94,5 +105,19 @@ public class UtilUI {
 
     public interface ThrowingRunnable {
         public void run() throws Exception;
+    }
+
+    public static ImageIcon createIcon(Ikon ikon, int size) {
+        FontIcon fi = FontIcon.of(ikon);
+        fi.setIconSize(size);
+        return fi.toImageIcon();
+    }
+
+    public static String emptyNullToSpace(String input) {
+        if(input == null || input.isEmpty()) {
+            return " ";
+        } else {
+            return input;
+        }
     }
 }

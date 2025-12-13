@@ -21,6 +21,7 @@ import eu.doppelhelix.app.bitwardenagent.http.UriMatchType;
 import eu.doppelhelix.app.bitwardenagent.impl.CopyFieldAction;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCipherData;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedFieldData;
+import eu.doppelhelix.app.bitwardenagent.impl.DecryptedPasswordHistoryEntry;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedUriData;
 import eu.doppelhelix.app.bitwardenagent.impl.LinkedIdListCellRenderer;
 import eu.doppelhelix.app.bitwardenagent.impl.TOTPUtil;
@@ -30,18 +31,20 @@ import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.io.IOException;
 import java.net.URI;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.Comparator;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -69,6 +72,8 @@ import static java.awt.GridBagConstraints.BASELINE_LEADING;
 
 public class PasswordPanel extends javax.swing.JPanel {
 
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("eu/doppelhelix/app/bitwardenagent/Bundle");
+
     private static final ImageIcon OPEN_EYE_ICON = createIcon(MaterialDesignE.EYE, 20);
     private static final ImageIcon CLOSED_EYE_ICON = createIcon(MaterialDesignE.EYE_OFF, 20);
     private static final ImageIcon COPY_ICON = createIcon(MaterialDesignC.CONTENT_COPY, 20);
@@ -88,23 +93,6 @@ public class PasswordPanel extends javax.swing.JPanel {
         initComponents();
         passwordPanelScrollPane.getHorizontalScrollBar().setUnitIncrement(getFont().getSize());
         passwordPanelScrollPane.getVerticalScrollBar().setUnitIncrement(getFont().getSize());
-        passwordPanel.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                GridBagLayout gbl = (GridBagLayout) passwordPanel.getLayout();
-                GridBagConstraints middleConstraints = gbl.getConstraints(fillerMiddle);
-                GridBagConstraints trailingConstraints = gbl.getConstraints(fillerTrailing);
-                if(passwordPanel.getPreferredSize().getWidth() > passwordPanel.getWidth()) {
-                    middleConstraints.weightx = 1;
-                    trailingConstraints.weightx = 0;
-                } else {
-                    middleConstraints.weightx = 0;
-                    trailingConstraints.weightx = 1;
-                }
-                gbl.setConstraints(fillerMiddle, middleConstraints);
-                gbl.setConstraints(fillerTrailing, trailingConstraints);
-            }
-        });
 
         copyIdButton.addActionListener(new CopyFieldAction(idField));
         copyUsernameButton.addActionListener(new CopyFieldAction(usernameField));
@@ -238,7 +226,7 @@ public class PasswordPanel extends javax.swing.JPanel {
             for(DecryptedUriData ud: this.decryptedCipherData.getLogin().getUriData()) {
                 JLabel label = new JLabel("Website:");
                 additionalComponents.add(label);
-                passwordPanel.add(label, new GridBagConstraints(0, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(label, new GridBagConstraints(0, componentRow, 2, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
                 JTextField uriField = new JTextField();
                 uriField.setColumns(25);
                 uriField.setEditable(false);
@@ -274,13 +262,13 @@ public class PasswordPanel extends javax.swing.JPanel {
                 additionalComponents.add(copyButton);
                 additionalComponents.add(toggleVisibilityButton);
                 additionalComponents.add(openLink);
-                passwordPanel.add(copyButton, new GridBagConstraints(2, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
-                passwordPanel.add(openLink, new GridBagConstraints(3, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
-                passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(4, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
-                passwordPanel.add(uriField, new GridBagConstraints(1, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                passwordPanel.add(copyButton, new GridBagConstraints(3, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(openLink, new GridBagConstraints(4, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(5, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(uriField, new GridBagConstraints(1, componentRow, 2, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 componentRow++;
                 additionalComponents.add(combobox);
-                passwordPanel.add(combobox, new GridBagConstraints(1, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                passwordPanel.add(combobox, new GridBagConstraints(1, componentRow, 2, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 combobox.setVisible(false);
                 componentRow++;
             }
@@ -300,8 +288,8 @@ public class PasswordPanel extends javax.swing.JPanel {
                     JButton copyButton = buildCopyButton(textField);
                     additionalComponents.add(textField);
                     additionalComponents.add(copyButton);
-                    passwordPanel.add(copyButton, new GridBagConstraints(2, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
-                    passwordPanel.add(textField, new GridBagConstraints(1, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                    passwordPanel.add(copyButton, new GridBagConstraints(3, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                    passwordPanel.add(textField, new GridBagConstraints(1, componentRow, 2, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 } else if (dfd.getType() == FieldType.HIDDEN) {
                     JPasswordField passwordField = new JPasswordField();
                     passwordField.setColumns(25);
@@ -320,30 +308,105 @@ public class PasswordPanel extends javax.swing.JPanel {
                     additionalComponents.add(passwordField);
                     additionalComponents.add(copyButton);
                     additionalComponents.add(toggleVisibilityButton);
-                    passwordPanel.add(copyButton, new GridBagConstraints(2, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
-                    passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(3, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
-                    passwordPanel.add(passwordField, new GridBagConstraints(1, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                    passwordPanel.add(copyButton, new GridBagConstraints(3, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                    passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(4, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                    passwordPanel.add(passwordField, new GridBagConstraints(1, componentRow, 2, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 } else if (dfd.getType() == FieldType.CHECKBOX) {
                     JCheckBox checkbox = new JCheckBox();
                     checkbox.setEnabled(false);
                     checkbox.setSelected(Boolean.parseBoolean(dfd.getValue()));
                     additionalComponents.add(checkbox);
-                    passwordPanel.add(checkbox, new GridBagConstraints(1, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                    passwordPanel.add(checkbox, new GridBagConstraints(1, componentRow, 2, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 } else if (dfd.getType() == FieldType.LINKED) {
                     JComboBox<LinkedId> combobox = new JComboBox<>(LinkedId.values());
                     combobox.setRenderer(new LinkedIdListCellRenderer());
                     combobox.setEnabled(false);
                     combobox.setSelectedItem(dfd.getLinkedId());
                     additionalComponents.add(combobox);
-                    passwordPanel.add(combobox, new GridBagConstraints(1, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                    passwordPanel.add(combobox, new GridBagConstraints(1, componentRow, 2, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
                 }
                 componentRow++;
             }
         }
+
+        if (decryptedCipherData != null) {
+            JLabel entryHistoryLbl = new JLabel(RESOURCE_BUNDLE.getString("entryHistory"));
+            entryHistoryLbl.setFont(entryHistoryLbl.getFont().deriveFont(Font.BOLD));
+            passwordPanel.add(entryHistoryLbl, new GridBagConstraints(0, componentRow, 6, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+            additionalComponents.add(entryHistoryLbl);
+            componentRow++;
+
+            JLabel revisionDateLbl = new JLabel(RESOURCE_BUNDLE.getString("entryHistory.revisionDate"));
+            passwordPanel.add(revisionDateLbl, new GridBagConstraints(0, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+            additionalComponents.add(revisionDateLbl);
+            JLabel revisionDateValue = new JLabel(formatLocalDate(decryptedCipherData.getRevisionDate()));
+            passwordPanel.add(revisionDateValue, new GridBagConstraints(1, componentRow, 2, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+            additionalComponents.add(revisionDateValue);
+            componentRow++;
+
+            JLabel creationDateLbl = new JLabel(RESOURCE_BUNDLE.getString("entryHistory.creationDate"));
+            passwordPanel.add(creationDateLbl, new GridBagConstraints(0, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+            additionalComponents.add(creationDateLbl);
+            JLabel creationDateValue = new JLabel(formatLocalDate(decryptedCipherData.getCreationDate()));
+            passwordPanel.add(creationDateValue, new GridBagConstraints(1, componentRow, 2, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+            additionalComponents.add(creationDateValue);
+            componentRow++;
+
+            OffsetDateTime passwordUpdated = decryptedCipherData
+                    .getPasswordHistory()
+                    .stream()
+                    .map(entry -> entry.getLastUsedDate())
+                    .max(Comparator.naturalOrder())
+                    .orElse(decryptedCipherData.getCreationDate());
+
+            JLabel passwordUpdatedLbl = new JLabel(RESOURCE_BUNDLE.getString("entryHistory.passwordUpdated"));
+            passwordPanel.add(passwordUpdatedLbl, new GridBagConstraints(0, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+            additionalComponents.add(passwordUpdatedLbl);
+            JLabel passwordUpdatedValue = new JLabel(formatLocalDate(passwordUpdated));
+            passwordPanel.add(passwordUpdatedValue, new GridBagConstraints(1, componentRow, 2, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+            additionalComponents.add(passwordUpdatedValue);
+            componentRow++;
+
+            for (DecryptedPasswordHistoryEntry dphe : decryptedCipherData.getPasswordHistory()) {
+                JPasswordField passwordField = new JPasswordField();
+                passwordField.setColumns(25);
+                passwordField.setEditable(false);
+                passwordField.setText(dphe.getPassword());
+                JButton copyButton = buildCopyButton(passwordField);
+                JToggleButton toggleVisibilityButton = new JToggleButton();
+                toggleVisibilityButton.setIcon(CLOSED_EYE_ICON);
+                toggleVisibilityButton.setMaximumSize(new java.awt.Dimension(24, 24));
+                toggleVisibilityButton.setMinimumSize(new java.awt.Dimension(24, 24));
+                toggleVisibilityButton.setPreferredSize(new java.awt.Dimension(24, 24));
+                toggleVisibilityButton.setSelectedIcon(OPEN_EYE_ICON);
+                toggleVisibilityButton.addActionListener(ae -> {
+                    passwordField.setEchoChar(toggleVisibilityButton.isSelected() ? '\u0000' : passwordMask);
+                });
+                JLabel changeDate = new JLabel(formatLocalDate(dphe.getLastUsedDate()));
+                additionalComponents.add(passwordField);
+                additionalComponents.add(changeDate);
+                additionalComponents.add(copyButton);
+                additionalComponents.add(toggleVisibilityButton);
+                passwordPanel.add(copyButton, new GridBagConstraints(3, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(toggleVisibilityButton, new GridBagConstraints(4, componentRow, 1, 1, 0, 0, BASELINE_LEADING, GridBagConstraints.NONE, defaultInsets, 0, 0));
+                passwordPanel.add(passwordField, new GridBagConstraints(1, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                passwordPanel.add(changeDate, new GridBagConstraints(2, componentRow, 1, 1, 1, 0, BASELINE_LEADING, GridBagConstraints.HORIZONTAL, defaultInsets, 0, 0));
+                componentRow++;
+            }
+        }
+
         updateAllowAccessCheckbox();
         revalidate();
         repaint();
         firePropertyChange("decryptedCipherData", old, this.decryptedCipherData);
+    }
+
+    public static String formatLocalDate(OffsetDateTime passwordUpdated) {
+        if(passwordUpdated == null) {
+            return "-";
+        } else {
+            return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).format(passwordUpdated);
+        }
     }
 
     public JButton buildCopyButton(JTextComponent textField) {
@@ -445,7 +508,6 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyUsernameButton = new javax.swing.JButton();
         copyPasswordButton = new javax.swing.JButton();
         fillerMiddle = new javax.swing.Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(32767, 32767));
-        fillerTrailing = new javax.swing.Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(32767, 32767));
         totpLabel = new javax.swing.JLabel();
         totpField = new javax.swing.JPasswordField();
         totpEvaluatedField = new javax.swing.JTextField();
@@ -514,6 +576,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 3;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -535,6 +598,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -557,6 +621,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 5;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -569,7 +634,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         passwordVisible.setPreferredSize(new java.awt.Dimension(24, 24));
         passwordVisible.setSelectedIcon(OPEN_EYE_ICON);
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 5;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -580,7 +645,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyIdButton.setMinimumSize(new java.awt.Dimension(24, 24));
         copyIdButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 3;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -591,7 +656,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyUsernameButton.setMinimumSize(new java.awt.Dimension(24, 24));
         copyUsernameButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 4;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -602,7 +667,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyPasswordButton.setMinimumSize(new java.awt.Dimension(24, 24));
         copyPasswordButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 5;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -610,14 +675,9 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 250;
-        gridBagConstraints.weighty = 1.0;
-        passwordPanel.add(fillerMiddle, gridBagConstraints);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 250;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.weighty = 1.0;
-        passwordPanel.add(fillerTrailing, gridBagConstraints);
+        passwordPanel.add(fillerMiddle, gridBagConstraints);
 
         totpLabel.setText(bundle.getString("totpLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
@@ -634,6 +694,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 6;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -646,6 +707,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 7;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -657,7 +719,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyTotpButton.setMinimumSize(new java.awt.Dimension(24, 24));
         copyTotpButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 6;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -669,7 +731,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         totpVisibleButton.setPreferredSize(new java.awt.Dimension(24, 24));
         totpVisibleButton.setSelectedIcon(OPEN_EYE_ICON);
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 6;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -680,7 +742,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyTotpEvaluatedButton.setMinimumSize(new java.awt.Dimension(24, 24));
         copyTotpEvaluatedButton.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 7;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -718,6 +780,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 8;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -730,6 +793,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 9;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -742,6 +806,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 10;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -753,7 +818,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copySshPrivateKey.setMinimumSize(new java.awt.Dimension(24, 24));
         copySshPrivateKey.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 8;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -764,7 +829,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copySshPublicKey.setMinimumSize(new java.awt.Dimension(24, 24));
         copySshPublicKey.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 9;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -775,7 +840,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copySshFingerprint.setMinimumSize(new java.awt.Dimension(24, 24));
         copySshFingerprint.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 10;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -794,7 +859,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyNotes.setMinimumSize(new java.awt.Dimension(24, 24));
         copyNotes.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 11;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -810,6 +875,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 11;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.weightx = 1.0;
@@ -844,7 +910,6 @@ public class PasswordPanel extends javax.swing.JPanel {
     private javax.swing.JButton copyTotpEvaluatedButton;
     private javax.swing.JButton copyUsernameButton;
     private javax.swing.Box.Filler fillerMiddle;
-    private javax.swing.Box.Filler fillerTrailing;
     private javax.swing.JTextField idField;
     private javax.swing.JLabel idLabel;
     private javax.swing.JLabel locationInfoPlaceholder;

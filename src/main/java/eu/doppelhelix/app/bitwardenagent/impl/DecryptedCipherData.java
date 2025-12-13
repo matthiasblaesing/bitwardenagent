@@ -15,6 +15,7 @@
  */
 package eu.doppelhelix.app.bitwardenagent.impl;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +33,11 @@ public class DecryptedCipherData {
     private String folder;
     private final List<String> collectionIds = new ArrayList<>();
     private final List<String> collections = new ArrayList<>();
+    private final List<DecryptedPasswordHistoryEntry> passwordHistory = new ArrayList<>();
+    private OffsetDateTime revisionDate;
+    private OffsetDateTime creationDate;
+    private OffsetDateTime deletedDate;
+    private OffsetDateTime archivedDate;
 
     public DecryptedCipherData() {
     }
@@ -118,6 +124,42 @@ public class DecryptedCipherData {
 
     public List<String> getCollections() {
         return collections;
+    }
+
+    public List<DecryptedPasswordHistoryEntry> getPasswordHistory() {
+        return passwordHistory;
+    }
+
+    public OffsetDateTime getRevisionDate() {
+        return revisionDate;
+    }
+
+    public void setRevisionDate(OffsetDateTime revisionDate) {
+        this.revisionDate = revisionDate;
+    }
+
+    public OffsetDateTime getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(OffsetDateTime creationDate) {
+        this.creationDate = creationDate;
+    }
+
+    public OffsetDateTime getDeletedDate() {
+        return deletedDate;
+    }
+
+    public void setDeletedDate(OffsetDateTime deletedDate) {
+        this.deletedDate = deletedDate;
+    }
+
+    public OffsetDateTime getArchivedDate() {
+        return archivedDate;
+    }
+
+    public void setArchivedDate(OffsetDateTime archivedDate) {
+        this.archivedDate = archivedDate;
     }
 
 }

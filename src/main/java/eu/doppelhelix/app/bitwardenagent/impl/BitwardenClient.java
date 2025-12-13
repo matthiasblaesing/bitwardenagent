@@ -21,6 +21,7 @@ import eu.doppelhelix.app.bitwardenagent.http.CipherData;
 import eu.doppelhelix.app.bitwardenagent.http.ConfigResponse;
 import eu.doppelhelix.app.bitwardenagent.http.FieldData;
 import eu.doppelhelix.app.bitwardenagent.http.OrganzationData;
+import eu.doppelhelix.app.bitwardenagent.http.PasswordHistoryEntry;
 import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
 import eu.doppelhelix.app.bitwardenagent.http.SyncData;
 import eu.doppelhelix.app.bitwardenagent.http.TokenResult;
@@ -217,7 +218,7 @@ public class BitwardenClient implements Closeable {
                     .queryParam("excludeDomains", "true")
                     .request()
                     .header("Authorization", "Bearer " + loginResponse.accessToken())
-                    .header("Bitwarden-Client-Version", "2025.08.0")
+                    .header("Bitwarden-Client-Version", "2026.1.0")
                     .get(SyncData.class);
 
             userKey = decryptKey(stretchedMasterKey, syncData.profile().key());
@@ -327,6 +328,18 @@ public class BitwardenClient implements Closeable {
                         dcd.getFields().add(dfd);
                     }
                 }
+                if (cd.passwordHistory() != null) {
+                    for(PasswordHistoryEntry phe: cd.passwordHistory()) {
+                        DecryptedPasswordHistoryEntry dphe = new DecryptedPasswordHistoryEntry();
+                        dphe.setLastUsedDate(phe.lastUsedDate());
+                        dphe.setPassword(decryptString(localUserKey, localOrganizationKeys, cd, phe.password()));
+                        dcd.getPasswordHistory().add(dphe);
+                    }
+                }
+                dcd.setArchivedDate(cd.archivedDate());
+                dcd.setCreationDate(cd.creationDate());
+                dcd.setDeletedDate(cd.deletedDate());
+                dcd.setRevisionDate(cd.revisionDate());
                 result.getCiphers().add(dcd);
             } catch (Exception ex) {
                 System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);

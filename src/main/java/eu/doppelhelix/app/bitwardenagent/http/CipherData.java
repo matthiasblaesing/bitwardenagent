@@ -17,6 +17,7 @@ package eu.doppelhelix.app.bitwardenagent.http;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -31,7 +32,13 @@ public record CipherData(
         SshKey sshKey,
         List<FieldData> fields,
         String folderId,
-        List<String> collectionIds
+        List<String> collectionIds,
+        OffsetDateTime revisionDate,
+        OffsetDateTime creationDate,
+        OffsetDateTime deletedDate,
+        OffsetDateTime archivedDate,
+        // Document to contain 5 elements (password or contents of hidden fields)
+        List<PasswordHistoryEntry> passwordHistory
         ) {
 
 }

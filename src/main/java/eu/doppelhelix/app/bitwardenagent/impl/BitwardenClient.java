@@ -16,16 +16,17 @@
 package eu.doppelhelix.app.bitwardenagent.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.doppelhelix.app.bitwardenagent.BitwardenMain;
 import eu.doppelhelix.app.bitwardenagent.http.CipherData;
 import eu.doppelhelix.app.bitwardenagent.http.ConfigResponse;
 import eu.doppelhelix.app.bitwardenagent.http.FieldData;
+import eu.doppelhelix.app.bitwardenagent.http.LoginErrorData;
 import eu.doppelhelix.app.bitwardenagent.http.OrganzationData;
 import eu.doppelhelix.app.bitwardenagent.http.PasswordHistoryEntry;
 import eu.doppelhelix.app.bitwardenagent.http.PreloginResult;
 import eu.doppelhelix.app.bitwardenagent.http.SyncData;
 import eu.doppelhelix.app.bitwardenagent.http.TokenResult;
 import eu.doppelhelix.app.bitwardenagent.http.UriData;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.client.Client;
@@ -67,6 +68,8 @@ import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.decryptPrivateKey
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.deriveMasterKey;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptString;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptionKeyFromMasterKey;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.ERROR;
 
 // https://bitwarden.com/help/kdf-algorithms/
 // https://www.avangate.it/wp-content/uploads/2024/04/help-bitwarden-security-white-paper.pdf
@@ -74,6 +77,8 @@ import static eu.doppelhelix.app.bitwardenagent.impl.UtilCryto.encryptionKeyFrom
 // https://github.com/bitwarden/clients/blob/main/libs/common/src/key-management/crypto/services/encrypt.service.implementation.ts#L307
 // https://github.com/bitwarden/clients/blob/f55f315ca15df09772e957e0e8b089a2d45b04f7/libs/common/src/platform/models/domain/symmetric-crypto-key.ts#L53
 public class BitwardenClient implements Closeable {
+
+    private static final System.Logger LOG = System.getLogger(BitwardenClient.class.getName());
 
     public enum State {
         Started,
@@ -127,7 +132,7 @@ public class BitwardenClient implements Closeable {
                 syncData = config.getSyncData();
                 preloginResult = config.getPreloginResult();
             } catch (IOException ex) {
-                System.getLogger(BitwardenClient.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                LOG.log(ERROR, (String) null, ex);
             }
         }
         if(email != null && baseURI != null && preloginResult != null && syncData != null) {
@@ -201,6 +206,8 @@ public class BitwardenClient implements Closeable {
     }
 
     public void sync() throws GeneralSecurityException {
+        LOG.log(INFO, "Starting sync");
+
         setState(Syncing);
 
         try {
@@ -234,8 +241,23 @@ public class BitwardenClient implements Closeable {
             setState(Syncable);
         } catch (NotAuthorizedException | ForbiddenException ex) {
             setState(Offline);
+            LOG.log(ERROR, "Authentication failure received", ex);
         } catch (Exception ex) {
-            setState(Syncable);
+            boolean handled = false;
+            try {
+                // Why NotAuthorized is not used is beyond my understanding
+                if(ex instanceof BadRequestException bre
+                        && "invalid_grant".equals(bre.getResponse().readEntity(LoginErrorData.class).error())) {
+                    handled = true;
+                    setState(Offline);
+                }
+            } catch (Exception ex2) {}
+            if(! handled) {
+                setState(Syncable);
+            }
+            LOG.log(ERROR, "Sync failed with exception", ex);
+        } finally {
+            LOG.log(INFO, "Finished sync");
         }
     }
 
@@ -260,14 +282,14 @@ public class BitwardenClient implements Closeable {
             try {
                 result.getCollectionNames().put(c.id(), decryptString(organizationKeys, c.organizationId(), c.name()));
             } catch (GeneralSecurityException ex) {
-                System.getLogger(BitwardenClient.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                LOG.log(ERROR, (String) null, ex);
             }
         });
         localSyncData.folders().forEach(f -> {
             try {
                 result.getFolderNames().put(f.id(), UtilCryto.decryptString(userKey, f.name()));
             } catch (GeneralSecurityException ex) {
-                System.getLogger(BitwardenClient.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                LOG.log(ERROR, (String) null, ex);
             }
         });
         localSyncData.ciphers().forEach(cd -> {
@@ -342,7 +364,7 @@ public class BitwardenClient implements Closeable {
                 dcd.setRevisionDate(cd.revisionDate());
                 result.getCiphers().add(dcd);
             } catch (Exception ex) {
-                System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                LOG.log(ERROR, (String) null, ex);
             }
         });
         localSyncData.folders().forEach(f -> {
@@ -353,7 +375,7 @@ public class BitwardenClient implements Closeable {
                 df.setRevisionDate(f.revisionDate());
                 result.getFolder().add(df);
             } catch (Exception ex) {
-                System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                LOG.log(ERROR, (String) null, ex);
             }
         });
         localSyncData.collections().forEach(c -> {
@@ -366,7 +388,7 @@ public class BitwardenClient implements Closeable {
                 dc.setManage(c.manage());
                 result.getCollections().add(dc);
             } catch (Exception ex) {
-                System.getLogger(BitwardenMain.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                LOG.log(ERROR, (String) null, ex);
             }
         });
 
@@ -404,7 +426,7 @@ public class BitwardenClient implements Closeable {
             Files.createDirectories(configPath.getParent());
             objectMapper.writeValue(configPath.toFile(), config);
         } catch (IOException ex) {
-            System.getLogger(BitwardenClient.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            LOG.log(ERROR, (String) null, ex);
         }
     }
 

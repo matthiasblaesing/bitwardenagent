@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -86,7 +87,18 @@ public class BitwardenClient implements Closeable {
         Initial,
         Offline,
         Syncable,
-        Syncing
+        Syncing;
+
+        private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("eu/doppelhelix/app/bitwardenagent/Bundle");
+
+        public String toLocaleString() {
+            String resourceKey = "status." + name();
+            if (RESOURCE_BUNDLE.keySet().contains(resourceKey)) {
+                return RESOURCE_BUNDLE.getString(resourceKey);
+            } else {
+                return name();
+            }
+        }
     }
 
     public interface StateObserver {
@@ -435,6 +447,9 @@ public class BitwardenClient implements Closeable {
         client.close();
     }
 
+    /**
+     * Logout user and remove saved state
+     */
     public void clear() {
         this.email = null;
         this.refreshToken = null;
@@ -482,9 +497,9 @@ public class BitwardenClient implements Closeable {
             Started, EnumSet.of(Initial, LocalStatePresent),
             LocalStatePresent, EnumSet.of(Initial, Offline),
             Initial, EnumSet.of(Syncable),
-            Offline, EnumSet.of(Syncable),
-            Syncable, EnumSet.of(Syncing),
-            Syncing, EnumSet.of(Syncable, Offline)
+            Offline, EnumSet.of(Initial, Syncable),
+            Syncable, EnumSet.of(Initial, Syncing),
+            Syncing, EnumSet.of(Initial, Syncable, Offline)
     );
 
     private void setState(State newState) {

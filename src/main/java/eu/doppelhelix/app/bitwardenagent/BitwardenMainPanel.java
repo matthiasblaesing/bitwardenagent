@@ -31,11 +31,11 @@ public class BitwardenMainPanel extends JPanel {
 
     private static final EnumSet PASSWORD_PANEL_STATES = EnumSet.of(Offline, Syncable, Syncing);
     private final BitwardenClient client;
-    private final JMenuBar menubar;
+    private final LoginAction authenticationAction;
 
-    public BitwardenMainPanel(BitwardenClient client, JMenuBar menubar) {
+    public BitwardenMainPanel(LoginAction authenticationAction, BitwardenClient client, JMenuBar menubar) {
+        this.authenticationAction = authenticationAction;
         this.client = client;
-        this.menubar = menubar;
         this.setLayout(new BorderLayout());
         client.addStateObserver((oldState, newState) -> SwingUtilities.invokeLater(() -> updateVisiblePanel(newState)));
         updateVisiblePanel(client.getState());
@@ -50,8 +50,8 @@ public class BitwardenMainPanel extends JPanel {
         } else {
             removeAll();
             switch(newState) {
-                case Started -> add(new StartenPanel(client, false));
-                case Initial -> add(new StartenPanel(client, true));
+                case Started -> add(new StartenPanel(authenticationAction, false));
+                case Initial -> add(new StartenPanel(authenticationAction, true));
                 case LocalStatePresent -> add(new UnlockPanel(client));
             }
         }

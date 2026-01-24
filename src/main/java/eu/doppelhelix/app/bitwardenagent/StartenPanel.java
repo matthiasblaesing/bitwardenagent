@@ -15,47 +15,20 @@
  */
 package eu.doppelhelix.app.bitwardenagent;
 
-import eu.doppelhelix.app.bitwardenagent.impl.BitwardenAuthenticator;
-import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
-import java.awt.BorderLayout;
-import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
-
 /**
  *
  * @author matthias
  */
 public class StartenPanel extends javax.swing.JPanel {
 
-    private final BitwardenClient client;
-
     /**
      * Creates new form StartenPanel
      */
-    public StartenPanel(BitwardenClient client, boolean enableLogin) {
-        this.client = client;
+    public StartenPanel(LoginAction authenticationAction, boolean enableLogin) {
         initComponents();
         startingLabel.setVisible(! enableLogin);
         buttonLogin.setVisible(enableLogin);
-        buttonLogin.addActionListener(ae -> {
-            BitwardenAuthenticator authenticator = client.createAuthenticator();
-            AuthenticatorUI ui = new AuthenticatorUI(authenticator);
-            JFrame frame = new JFrame("Bitwarden Login");
-            frame.setLayout(new BorderLayout());
-            frame.add(ui, BorderLayout.CENTER);
-            frame.setSize(450, 450);
-            frame.setLocationRelativeTo(this.getRootPane());
-            frame.setVisible(true);
-            authenticator.addStateObserver((oldState, newState) -> {
-                SwingUtilities.invokeLater(() -> {
-                    switch(newState) {
-                        case Canceled, Finished -> {
-                            frame.setVisible(false);
-                        }
-                    }
-                });
-            });
-        });
+        buttonLogin.setAction(authenticationAction);
     }
 
     /**

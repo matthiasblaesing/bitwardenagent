@@ -39,6 +39,7 @@ public class Configuration {
     private static final Configuration INSTANCE = new Configuration();
 
     public static final String PROP_START_UNIX_DOMAIN_SOCKET_SERVER = "startUnixDomainSocketServer";
+    public static final String PROP_AUTOMATIC_SYNC = "automaticSync";
     public static final String PROP_ALLOW_ALL_ACCESS = "allowAllAccess";
     public static final String PROP_ALLOW_ACCESS = "allowAccess";
 
@@ -80,6 +81,20 @@ public class Configuration {
             return (boolean) configData.getOrDefault(PROP_START_UNIX_DOMAIN_SOCKET_SERVER, false);
         } catch (ClassCastException ex) {
             return false;
+        }
+    }
+
+    public void setAutomaticSync(boolean value) {
+        configData.put(PROP_AUTOMATIC_SYNC, value);
+        writeConfig();
+        this.observer.forEach(co -> co.updatedValue(PROP_AUTOMATIC_SYNC, value));
+    }
+
+    public boolean isAutomaticSync() {
+        try {
+            return (boolean) configData.getOrDefault(PROP_AUTOMATIC_SYNC, true);
+        } catch (ClassCastException ex) {
+            return true;
         }
     }
 

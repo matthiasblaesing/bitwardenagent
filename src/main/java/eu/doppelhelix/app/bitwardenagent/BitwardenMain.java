@@ -29,7 +29,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ResourceBundle;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JDialog;
@@ -41,6 +47,8 @@ import javax.swing.SwingUtilities;
 
 import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ALL_ACCESS;
 import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_START_UNIX_DOMAIN_SOCKET_SERVER;
+import static java.lang.System.Logger.Level.ERROR;
+import static java.lang.System.Logger.Level.WARNING;
 
 /**
  * Client for Bitwarden Systems
@@ -50,7 +58,16 @@ public class BitwardenMain {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("eu/doppelhelix/app/bitwardenagent/Bundle");
     private static final System.Logger LOG = System.getLogger(BitwardenMain.class.getName());
 
+    private static Logger BWCLogger = Logger.getLogger(BitwardenClient.class.getName());
+
+    private static ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(0);
+
     public static void main(String[] args) throws Exception {
+        for(Handler h: Logger.getLogger("").getHandlers()) {
+            h.setLevel(Level.ALL);
+        }
+
+//        BWCLogger.setLevel(Level.FINEST);
 
         BitwardenClient bwClient = new BitwardenClient();
 
@@ -72,7 +89,7 @@ public class BitwardenMain {
                         awtAppClassName.setAccessible(true);
                         awtAppClassName.set(null, "BitwardenAgent"); //NOI18N
                     } catch (Exception x) {
-                        LOG.log(System.Logger.Level.WARNING, "", x);
+                        LOG.log(WARNING, "", x);
                     }
                 }
             }
@@ -87,8 +104,12 @@ public class BitwardenMain {
                 BufferedImage bi = ImageIO.read(is);
                 frame.setIconImage(bi);
             } catch (IOException ex) {
-                LOG.log(System.Logger.Level.WARNING, "Failed to load application icon", ex);
+                LOG.log(WARNING, "Failed to load application icon", ex);
             }
+
+            LoginAction loginAction = new LoginAction(frame, bwClient);
+            LogoutAction logoutAction = new LogoutAction(frame, bwClient);
+
             JMenuBar menuBar = new JMenuBar();
             JMenuItem exit = new JMenuItem(RESOURCE_BUNDLE.getString("menuItem.exit"));
             exit.addActionListener(ae -> System.exit(0));
@@ -99,15 +120,29 @@ public class BitwardenMain {
                 });
             });
             refresh.addActionListener(ae -> {
-                UtilUI.runOffTheEdt(
-                        () -> bwClient.sync(),
-                        () -> {
-                        },
-                        (exception) -> {
-                            LOG.log(System.Logger.Level.WARNING, "Failed to set master password", exception);
-                        }
-                );
+                runSync(bwClient);
             });
+            JCheckBoxMenuItem automaticSync = new JCheckBoxMenuItem(RESOURCE_BUNDLE.getString("menuItem.automaticSync"));
+            automaticSync.addActionListener(ae -> {
+                Configuration conf = Configuration.getConfiguration();
+                conf.setAutomaticSync(conf.isAutomaticSync());
+            });
+            Configuration.getConfiguration().addObserver((name, value) -> {
+                if (PROP_ALLOW_ALL_ACCESS.equals(name)) {
+                    automaticSync.setState((boolean) value);
+                }
+            });
+            automaticSync.setState(Configuration.getConfiguration().isAutomaticSync());
+
+            scheduledExecutor.scheduleAtFixedRate(() -> {
+                        if(Configuration.getConfiguration().isAutomaticSync()) {
+                            runSync(bwClient);
+                        }
+                    },
+                    1,
+                    5,
+                    TimeUnit.MINUTES
+            );
             JCheckBoxMenuItem enableServer = new JCheckBoxMenuItem(RESOURCE_BUNDLE.getString("menuItem.enableServer"));
             enableServer.addActionListener(ae -> {
                 boolean newState = !Configuration.getConfiguration().isStartUnixDomainSocketServer();
@@ -129,6 +164,9 @@ public class BitwardenMain {
             allowAllAccess.setState(Configuration.getConfiguration().isAllowAllAccess());
             menuBar.add(fileMenu);
             fileMenu.add(refresh);
+            fileMenu.add(automaticSync);
+            fileMenu.add(loginAction);
+            fileMenu.add(logoutAction);
             fileMenu.addSeparator();
             fileMenu.add(enableServer);
             fileMenu.add(allowAllAccess);
@@ -136,7 +174,8 @@ public class BitwardenMain {
             fileMenu.add(exit);
             frame.setJMenuBar(menuBar);
             frame.setLayout(new BorderLayout());
-            frame.add(new BitwardenMainPanel(bwClient, menuBar), BorderLayout.CENTER);
+            frame.add(new BitwardenMainPanel(loginAction, bwClient, menuBar), BorderLayout.CENTER);
+            frame.add(new StatusBar(bwClient), BorderLayout.SOUTH);
             frame.setSize(1200, 800);
             frame.setLocationByPlatform(true);
             frame.setVisible(true);
@@ -176,5 +215,22 @@ public class BitwardenMain {
 
         unixDomainSocketServerStarter.run();
 
+    }
+
+    public static void runSync(BitwardenClient bwClient) {
+        try {
+            UtilUI.runOffTheEdt(
+                    () -> bwClient.sync(),
+                    () -> {
+                    },
+                    (exception) -> {
+                        LOG.log(WARNING, "Failed to run sync", exception);
+                    }
+            );
+        } catch (Throwable t) {
+            // This should never be hit. It is just a last resort to prevent
+            // throwables to transition beyond this point
+            LOG.log(ERROR, "Scheduling of sync failed", t);
+        }
     }
 }

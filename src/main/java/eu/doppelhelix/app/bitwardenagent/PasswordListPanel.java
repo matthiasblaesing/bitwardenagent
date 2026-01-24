@@ -195,12 +195,12 @@ public class PasswordListPanel extends javax.swing.JPanel {
 
     private void updateVisiblePanel() {
         int dividerLocation = passwordListWrapper.getDividerLocation();
-        passwordPanel.setVisible(passwordPanel.getDecryptedCipherData() != null);
+        passwordPanelWrapper.setVisible(passwordPanel.getDecryptedCipherData() != null);
         selectEntryPanel.setVisible(passwordPanel.getDecryptedCipherData() == null);
         if(passwordPanel.getDecryptedCipherData() == null) {
             passwordListWrapper.setRightComponent(selectEntryPanel);
         } else {
-            passwordListWrapper.setRightComponent(passwordPanel);
+            passwordListWrapper.setRightComponent(passwordPanelWrapper);
         }
         passwordListWrapper.setDividerLocation(dividerLocation);
         revalidate();
@@ -339,10 +339,12 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordListQuickFilter = new javax.swing.JTextField();
         passwordListGroupSelectorWrapper = new javax.swing.JScrollPane();
         passwordListGroupSelector = new javax.swing.JTree();
+        passwordListWarpper2 = new javax.swing.JPanel();
         passwordListScrollPane = new javax.swing.JScrollPane();
         passwordList = new javax.swing.JList<>();
         selectEntryPanel = new javax.swing.JPanel();
         selectEntryLabel = new javax.swing.JLabel();
+        passwordPanelWrapper = new javax.swing.JPanel();
         passwordPanel = new eu.doppelhelix.app.bitwardenagent.PasswordPanel();
 
         setLayout(new java.awt.BorderLayout());
@@ -371,15 +373,24 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.weighty = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 3);
         passwordListFilterPanel.add(passwordListGroupSelectorWrapper, gridBagConstraints);
 
         passwordListPanel.setLeftComponent(passwordListFilterPanel);
 
+        passwordListWarpper2.setLayout(new java.awt.GridBagLayout());
+
         passwordList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         passwordListScrollPane.setViewportView(passwordList);
 
-        passwordListPanel.setRightComponent(passwordListScrollPane);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.weighty = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(5, 3, 5, 3);
+        passwordListWarpper2.add(passwordListScrollPane, gridBagConstraints);
+
+        passwordListPanel.setRightComponent(passwordListWarpper2);
 
         passwordListWrapper.setLeftComponent(passwordListPanel);
 
@@ -390,7 +401,16 @@ public class PasswordListPanel extends javax.swing.JPanel {
         selectEntryPanel.add(selectEntryLabel, new java.awt.GridBagConstraints());
 
         passwordListWrapper.setRightComponent(selectEntryPanel);
-        passwordListWrapper.setRightComponent(passwordPanel);
+
+        passwordPanelWrapper.setLayout(new java.awt.GridBagLayout());
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.weighty = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(5, 3, 5, 5);
+        passwordPanelWrapper.add(passwordPanel, gridBagConstraints);
+
+        passwordListWrapper.setRightComponent(passwordPanelWrapper);
 
         add(passwordListWrapper, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
@@ -404,8 +424,10 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private javax.swing.JSplitPane passwordListPanel;
     private javax.swing.JTextField passwordListQuickFilter;
     private javax.swing.JScrollPane passwordListScrollPane;
+    private javax.swing.JPanel passwordListWarpper2;
     private javax.swing.JSplitPane passwordListWrapper;
     private eu.doppelhelix.app.bitwardenagent.PasswordPanel passwordPanel;
+    private javax.swing.JPanel passwordPanelWrapper;
     private javax.swing.JLabel selectEntryLabel;
     private javax.swing.JPanel selectEntryPanel;
     // End of variables declaration//GEN-END:variables

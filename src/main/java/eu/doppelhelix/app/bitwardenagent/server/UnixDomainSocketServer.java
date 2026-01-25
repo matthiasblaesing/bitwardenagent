@@ -139,11 +139,7 @@ public class UnixDomainSocketServer extends Thread {
                             } else {
                                 LOG.log(Level.WARNING, "Entry does not have expected format (ENTRYID/AREA/ATTRIBUTE): {0}", input);
                             }
-                            bb.clear();
-                            bb.put(result.getBytes(UTF_8));
-                            bb.put("\n".getBytes(UTF_8));
-                            bb.flip();
-                            ch.write(bb);
+                            ch.write(ByteBuffer.wrap(result.getBytes(UTF_8)));
                             ch.close();
                         } catch (IOException | RuntimeException ex1) {
                             System.getLogger(UnixDomainSocketServer.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex1);

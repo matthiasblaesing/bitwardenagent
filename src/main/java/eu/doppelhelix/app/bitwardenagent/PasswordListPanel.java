@@ -23,6 +23,7 @@ import eu.doppelhelix.app.bitwardenagent.impl.OUFolderTreeNode;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
@@ -41,6 +43,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JTree;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.TreeSelectionEvent;
@@ -52,7 +55,7 @@ import javax.swing.tree.TreePath;
 
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.FOLDER_ICON;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.OFFICE_BUILDING_ICON;
-import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.SELECT_GROUP_ICON;
+import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.FOLDER_NETWORK_ICON;
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.ofNullable;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.emptyNullToSpace;
@@ -82,16 +85,29 @@ public class PasswordListPanel extends javax.swing.JPanel {
         });
         passwordList.setCellRenderer(new DefaultListCellRenderer() {
             private final JLabel nameLabel = new JLabel();
-            private final JLabel organizationLabel = new JLabel();
+            private final JLabel subtitle = new JLabel();
+            private final JLabel officeIcon;
             private final JPanel listEntryPanel;
+            private final JPanel namePanel;
 
             {
+                officeIcon = new JLabel("", UtilUI.FOLDER_NETWORK_ICON, JLabel.LEADING);
+                officeIcon.setBorder(new EmptyBorder(0, 5, 0, 0));
+                namePanel = new JPanel();
+                namePanel.setLayout(new FlowLayout(FlowLayout.LEADING, 0, 0));
+                namePanel.add(nameLabel);
+                namePanel.add(officeIcon);
+                namePanel.setBorder(new EmptyBorder(2, 0, 0, 0));
                 listEntryPanel = new JPanel();
                 listEntryPanel.setLayout(new BoxLayout(listEntryPanel, BoxLayout.PAGE_AXIS));
-                listEntryPanel.add(nameLabel);
-                listEntryPanel.add(organizationLabel);
+                listEntryPanel.add(namePanel);
+                listEntryPanel.add(subtitle);
+                namePanel.setAlignmentX(0);
+                subtitle.setAlignmentX(0);
                 nameLabel.setOpaque(false);
-                organizationLabel.setOpaque(false);
+                subtitle.setOpaque(false);
+                subtitle.setBorder(new EmptyBorder(0, 0, 2, 0));
+                namePanel.setOpaque(false);
                 listEntryPanel.setOpaque(true);
             }
 
@@ -99,24 +115,34 @@ public class PasswordListPanel extends javax.swing.JPanel {
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 JComponent superComponent = (JComponent) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 DecryptedCipherData dcd = (DecryptedCipherData) value;
-                Color backgroundColor = superComponent.getBackground();
-                if ((index % 2 == 1) && (!(isSelected || cellHasFocus))) {
-                    HSLColor color = new HSLColor(backgroundColor);
+                Color subtitleColor;
+                HSLColor color = new HSLColor(superComponent.getForeground());
+                if (!(isSelected || cellHasFocus)) {
                     if (color.getLuminance() > 50) {
-                        backgroundColor = color.adjustLuminance(color.getLuminance() - 5);
+                        subtitleColor = color.adjustLuminance(color.getLuminance() - 35);
                     } else {
-                        backgroundColor = color.adjustLuminance(color.getLuminance() + 5);
+                        subtitleColor = color.adjustLuminance(color.getLuminance() + 35);
                     }
+                } else {
+                    subtitleColor = superComponent.getForeground();
                 }
                 nameLabel.setText(emptyNullToSpace(dcd.getName()));
-                organizationLabel.setText(emptyNullToSpace(dcd.getOrganization()));
+                if(dcd.getLogin() != null) {
+                    subtitle.setText(emptyNullToSpace(dcd.getLogin().getUsername()));
+                } else if(dcd.getSshKey() != null) {
+                    subtitle.setText(emptyNullToSpace(dcd.getSshKey().getKeyFingerprint()));
+                } else {
+                    subtitle.setText(" ");
+                }
+                subtitle.setForeground(Color.lightGray);
                 listEntryPanel.setComponentOrientation(superComponent.getComponentOrientation());
                 nameLabel.setForeground(superComponent.getForeground());
                 nameLabel.setFont(superComponent.getFont());
-                organizationLabel.setForeground(superComponent.getForeground());
-                organizationLabel.setFont(superComponent.getFont().deriveFont(Font.ITALIC));
+                subtitle.setForeground(subtitleColor);
+                subtitle.setFont(superComponent.getFont().deriveFont(Font.ITALIC));
                 listEntryPanel.setBorder(superComponent.getBorder());
-                listEntryPanel.setBackground(backgroundColor);
+                listEntryPanel.setBackground(superComponent.getBackground());
+                officeIcon.setVisible(dcd.getOrganizationId() != null);
                 return listEntryPanel;
             }
         });
@@ -280,7 +306,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
                 for (String collectionName : path) {
                     pathCombined = pathCombined + "/" + collectionName;
                     if (!collectionNodes.containsKey(pathCombined)) {
-                        OUFolderTreeNode collectionNode = new OUFolderTreeNode(parentNode, collectionName, SELECT_GROUP_ICON);
+                        OUFolderTreeNode collectionNode = new OUFolderTreeNode(parentNode, collectionName, FOLDER_NETWORK_ICON);
                         collectionNodes.put(pathCombined, collectionNode);
                         parentNode = collectionNode;
                     } else {

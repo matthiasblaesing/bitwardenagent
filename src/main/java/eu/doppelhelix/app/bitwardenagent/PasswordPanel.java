@@ -64,10 +64,10 @@ import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ACCESS;
 import static eu.doppelhelix.app.bitwardenagent.Configuration.PROP_ALLOW_ALL_ACCESS;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.FOLDER_ICON;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.OFFICE_BUILDING_ICON;
-import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.SELECT_GROUP_ICON;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.createIcon;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.emptyNullToSpace;
 import static java.awt.GridBagConstraints.BASELINE_LEADING;
+import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.FOLDER_NETWORK_ICON;
 
 
 public class PasswordPanel extends javax.swing.JPanel {
@@ -172,7 +172,7 @@ public class PasswordPanel extends javax.swing.JPanel {
                 locationInfoWrapper.add(label, locationInfoWrapper.getComponents().length - 1);
             }
             for (String collection : decryptedCipherData.getCollections()) {
-                JLabel label = new JLabel(collection, SELECT_GROUP_ICON, JLabel.LEADING);
+                JLabel label = new JLabel(collection, FOLDER_NETWORK_ICON, JLabel.LEADING);
                 label.setFont(label.getFont().deriveFont(Font.ITALIC));
                 locationInfoWrapper.add(label);
             }

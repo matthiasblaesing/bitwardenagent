@@ -24,14 +24,13 @@ import javax.swing.SwingWorker;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignF;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignO;
-import org.kordamp.ikonli.materialdesign2.MaterialDesignS;
 import org.kordamp.ikonli.swing.FontIcon;
 
 public class UtilUI {
 
-    public static final ImageIcon FOLDER_ICON = createIcon(MaterialDesignF.FOLDER, 16);
-    public static final ImageIcon OFFICE_BUILDING_ICON = createIcon(MaterialDesignO.OFFICE_BUILDING, 16);
-    public static final ImageIcon SELECT_GROUP_ICON = createIcon(MaterialDesignS.SELECT_GROUP, 16);
+    public static final ImageIcon FOLDER_ICON = createIcon(MaterialDesignF.FOLDER_OUTLINE, 16);
+    public static final ImageIcon OFFICE_BUILDING_ICON = createIcon(MaterialDesignO.OFFICE_BUILDING_OUTLINE, 16);
+    public static final ImageIcon FOLDER_NETWORK_ICON = createIcon(MaterialDesignF.FOLDER_NETWORK_OUTLINE, 16);
 
     public static <T> void runOffTheEdt(Callable<T> runOffEdt, Consumer<T> runOnEdt, Consumer<Throwable> errorHandler) {
         new SwingWorker<T, T>() {

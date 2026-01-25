@@ -109,6 +109,10 @@ class Packaging {
                                 new File(baseDir, "target/" + artifactId + ".jar").toPath(),
                                 new File(platformOutputDir, "lib/" + artifactId + ".jar").toPath()
                         );
+                        Files.copy(
+                                new File(baseDir, "README.md").toPath(),
+                                new File(platformOutputDir, "README.md").toPath()
+                        );
 
                         if(jdkDirCandidate.getParentFile().getName().contains("-windows-")) {
                             try(FileOutputStream fos = new FileOutputStream(new File(platformOutputDir, "bitwardenagent.cmd"));

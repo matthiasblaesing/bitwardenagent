@@ -18,6 +18,7 @@ package eu.doppelhelix.app.bitwardenagent;
 import com.formdev.flatlaf.util.HSLColor;
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCipherData;
+import eu.doppelhelix.app.bitwardenagent.impl.DecryptedCollection;
 import eu.doppelhelix.app.bitwardenagent.impl.DecryptedSyncData;
 import eu.doppelhelix.app.bitwardenagent.impl.OUFolderTreeNode;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
@@ -25,16 +26,17 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
@@ -63,6 +65,7 @@ import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.emptyNullToSpace;
 public class PasswordListPanel extends javax.swing.JPanel {
 
     private static final System.Logger LOG = System.getLogger(PasswordListPanel.class.getName());
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("eu/doppelhelix/app/bitwardenagent/Bundle");
 
     private final BitwardenClient client;
     private final DefaultListModel<DecryptedCipherData> passwordListModel = new DefaultListModel<>();
@@ -175,7 +178,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
                     if(ouftn.getIcon() != null) {
                         renderer.setIcon(ouftn.getIcon());
                     }
-                    renderer.setText(ouftn.getName());
+                    renderer.setText(ouftn.getDisplayName());
                     if (ouftn.getOrganisationId() == null && ouftn.getFolderId() == null && ouftn.getCollectionId() == null && ! ouftn.isUnnamedFolder()) {
                         renderer.setForeground(Color.DARK_GRAY);
                         plainFont = false;
@@ -270,11 +273,11 @@ public class PasswordListPanel extends javax.swing.JPanel {
     }
 
     private OUFolderTreeNode buildSelectionNode(DecryptedSyncData dsd) {
-        OUFolderTreeNode rootNode = new OUFolderTreeNode(null, "Filter", null);
+        OUFolderTreeNode rootNode = new OUFolderTreeNode(null, RESOURCE_BUNDLE.getString("passwordTree.root"), null);
         if(dsd != null) {
-            OUFolderTreeNode foldersNode = new OUFolderTreeNode(rootNode, "Folders", FOLDER_ICON);
+            OUFolderTreeNode foldersNode = new OUFolderTreeNode(rootNode, RESOURCE_BUNDLE.getString("passwordTree.folders"), FOLDER_ICON);
             foldersNode.setUnnamedFolder(true);
-            OUFolderTreeNode collectionsNode = new OUFolderTreeNode(rootNode, "Organisations", OFFICE_BUILDING_ICON);
+            OUFolderTreeNode collectionsNode = new OUFolderTreeNode(rootNode, RESOURCE_BUNDLE.getString("passwordTree.collections"), OFFICE_BUILDING_ICON);
             Map<String, OUFolderTreeNode> folderNodes = new HashMap<>();
             folderNodes.put("", foldersNode);
             dsd.getFolder().forEach(df -> {
@@ -294,27 +297,51 @@ public class PasswordListPanel extends javax.swing.JPanel {
                 }
             });
             Map<String, OUFolderTreeNode> collectionNodes = new HashMap<>();
-            dsd.getOrganizationNames().entrySet().forEach(e -> {
-                OUFolderTreeNode organizationNode = new OUFolderTreeNode(collectionsNode, e.getValue(), OFFICE_BUILDING_ICON);
-                organizationNode.setOrganisationId(e.getKey());
-                collectionNodes.put(e.getKey(), organizationNode);
-            });
-            dsd.getCollections().forEach(dc -> {
-                String[] path = dc.getName().split("/");
-                OUFolderTreeNode parentNode = collectionNodes.get(dc.getOrganizationId());
-                String pathCombined = dc.getOrganizationId();
-                for (String collectionName : path) {
-                    pathCombined = pathCombined + "/" + collectionName;
-                    if (!collectionNodes.containsKey(pathCombined)) {
-                        OUFolderTreeNode collectionNode = new OUFolderTreeNode(parentNode, collectionName, FOLDER_NETWORK_ICON);
-                        collectionNodes.put(pathCombined, collectionNode);
-                        parentNode = collectionNode;
+            if (dsd.getOrganizationNames().size() > 1) {
+                dsd.getOrganizationNames().entrySet().forEach(e -> {
+                    OUFolderTreeNode organizationNode = new OUFolderTreeNode(collectionsNode, e.getValue(), OFFICE_BUILDING_ICON);
+                    organizationNode.setOrganisationId(e.getKey());
+                    collectionNodes.put(e.getKey(), organizationNode);
+                });
+            }
+
+            // Bitwardens "Collection" hierarchy construct is a bit ähm strange
+            // Collections are just a list of elements. The hirarchy is deduced
+            // from the name. "/" is treated as level separator and collections
+            // with the same prefix are grouped under that prefix.
+            // BW prevents users from changing the name of a collection to an
+            // entry with "/" in the name, but when creating a collection, "/"
+            // is accepted.
+            List<DecryptedCollection> orderedCollections = new ArrayList<>();
+            orderedCollections.addAll(dsd.getCollections());
+            orderedCollections.sort(Comparator.comparing(dc -> dc.getName()));
+            Map<String, OUFolderTreeNode> parentNodesByName = new HashMap<>();
+            for(DecryptedCollection dc: orderedCollections) {
+                OUFolderTreeNode parentNode = parentNodesByName
+                        .keySet()
+                        .stream()
+                        .filter(n -> dc.getName().startsWith(n + "/"))
+                        .sorted(Comparator.comparing((String s) -> s.length()).reversed())
+                        .findFirst()
+                        .map(s -> parentNodesByName.get(s))
+                        .orElse(null);
+
+                String truncatedName;
+                if(parentNode == null) {
+                    if(collectionNodes.containsKey(dc.getOrganizationId())) {
+                        parentNode = collectionNodes.get(dc.getOrganizationId());
                     } else {
-                        parentNode = collectionNodes.get(pathCombined);
+                        parentNode = collectionsNode;
                     }
+                    truncatedName = dc.getName();
+                } else {
+                    truncatedName = dc.getName().substring(parentNode.getName().length() + 1).trim();
                 }
-                parentNode.setCollectionId(dc.getId());
-            });
+
+                OUFolderTreeNode collectionNode = new OUFolderTreeNode(parentNode, truncatedName, dc.getName(), FOLDER_NETWORK_ICON);
+                collectionNode.setCollectionId(dc.getId());
+                parentNodesByName.put(dc.getName(), collectionNode);
+            }
         }
         return rootNode;
     }

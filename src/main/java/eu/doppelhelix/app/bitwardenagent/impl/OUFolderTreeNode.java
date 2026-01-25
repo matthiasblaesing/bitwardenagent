@@ -17,6 +17,7 @@ package eu.doppelhelix.app.bitwardenagent.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
 import javax.swing.Icon;
@@ -27,6 +28,7 @@ public class OUFolderTreeNode implements TreeNode {
 
     private final OUFolderTreeNode parent;
     private final List<OUFolderTreeNode> childNodes = new ArrayList<>();
+    private final String displayName;
     private final String name;
     private final Icon icon;
     private boolean unnamedFolder;
@@ -35,12 +37,19 @@ public class OUFolderTreeNode implements TreeNode {
     private String organisationId;
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public OUFolderTreeNode(OUFolderTreeNode parent, String name, Icon icon) {
+    public OUFolderTreeNode(OUFolderTreeNode parent, String displayName, Icon icon) {
+        this(parent, displayName, displayName, icon);
+    }
+
+    @SuppressWarnings("LeakingThisInConstructor")
+    public OUFolderTreeNode(OUFolderTreeNode parent, String displayName, String name, Icon icon) {
         this.parent = parent;
+        this.displayName = displayName;
         this.name = name;
         this.icon = icon;
         if(parent != null) {
             parent.childNodes.add(this);
+            parent.childNodes.sort(Comparator.comparing(ouftn -> ouftn.getDisplayName()));
         }
     }
 
@@ -74,6 +83,10 @@ public class OUFolderTreeNode implements TreeNode {
 
     public void setUnnamedFolder(boolean unnamedFolder) {
         this.unnamedFolder = unnamedFolder;
+    }
+
+    public String getDisplayName() {
+        return displayName;
     }
 
     public String getName() {

@@ -351,6 +351,38 @@ public class BitwardenClient implements Closeable {
                     dsk.setPublicKey(decryptString(localUserKey, localOrganizationKeys, cd, cd.sshKey().publicKey()));
                     dcd.setSshKey(dsk);
                 }
+                if (cd.card() != null) {
+                    DecryptedCardData decryptedCardData = new DecryptedCardData();
+                    decryptedCardData.setBrand(decryptString(cd, cd.card().brand()));
+                    decryptedCardData.setCardholderName(decryptString(cd, cd.card().cardholderName()));
+                    decryptedCardData.setNumber(decryptString(cd, cd.card().number()));
+                    decryptedCardData.setExpMonth(decryptString(cd, cd.card().expMonth()));
+                    decryptedCardData.setExpYear(decryptString(cd, cd.card().expYear()));
+                    decryptedCardData.setCode(decryptString(cd, cd.card().code()));
+                    dcd.setCard(decryptedCardData);
+                }
+                if (cd.identity() != null) {
+                    DecryptedIdentityData decryptedIdentityData = new DecryptedIdentityData();
+                    decryptedIdentityData.setTitle(decryptString(cd, cd.identity().title()));
+                    decryptedIdentityData.setFirstName(decryptString(cd, cd.identity().firstName()));
+                    decryptedIdentityData.setMiddleName(decryptString(cd, cd.identity().middleName()));
+                    decryptedIdentityData.setLastName(decryptString(cd, cd.identity().lastName()));
+                    decryptedIdentityData.setAddress1(decryptString(cd, cd.identity().address1()));
+                    decryptedIdentityData.setAddress2(decryptString(cd, cd.identity().address2()));
+                    decryptedIdentityData.setAddress3(decryptString(cd, cd.identity().address3()));
+                    decryptedIdentityData.setCity(decryptString(cd, cd.identity().city()));
+                    decryptedIdentityData.setState(decryptString(cd, cd.identity().state()));
+                    decryptedIdentityData.setPostalCode(decryptString(cd, cd.identity().postalCode()));
+                    decryptedIdentityData.setCountry(decryptString(cd, cd.identity().country()));
+                    decryptedIdentityData.setCompany(decryptString(cd, cd.identity().company()));
+                    decryptedIdentityData.setEmail(decryptString(cd, cd.identity().email()));
+                    decryptedIdentityData.setPhone(decryptString(cd, cd.identity().phone()));
+                    decryptedIdentityData.setSsn(decryptString(cd, cd.identity().ssn()));
+                    decryptedIdentityData.setUsername(decryptString(cd, cd.identity().username()));
+                    decryptedIdentityData.setPassportNumber(decryptString(cd, cd.identity().passportNumber()));
+                    decryptedIdentityData.setLicenseNumber(decryptString(cd, cd.identity().licenseNumber()));
+                    dcd.setIdentity(decryptedIdentityData);
+                }
                 dcd.setNotes(decryptString(localUserKey, localOrganizationKeys, cd, cd.notes()));
                 if (cd.fields() != null) {
                     for (FieldData fd : cd.fields()) {

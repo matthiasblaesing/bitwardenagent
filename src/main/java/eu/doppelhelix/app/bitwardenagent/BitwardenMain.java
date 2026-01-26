@@ -67,7 +67,7 @@ public class BitwardenMain {
             h.setLevel(Level.ALL);
         }
 
-//        BWCLogger.setLevel(Level.FINEST);
+        BWCLogger.setLevel(Level.FINEST);
 
         BitwardenClient bwClient = new BitwardenClient();
 

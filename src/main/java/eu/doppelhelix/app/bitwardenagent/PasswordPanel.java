@@ -103,12 +103,48 @@ public class PasswordPanel extends javax.swing.JPanel {
         copySshPublicKey.addActionListener(new CopyFieldAction(sshPublicKeyField));
         copySshFingerprint.addActionListener(new CopyFieldAction(sshFingerprintField));
         copyNotes.addActionListener(new CopyFieldAction(notesField));
+        copyCardHoldername.addActionListener(new CopyFieldAction(cardHoldernameField));
+        copyCardBrand.addActionListener(new CopyFieldAction(cardBrandField));
+        copyCardNumber.addActionListener(new CopyFieldAction(cardNumberField));
+        copyCardExpirationMonth.addActionListener(new CopyFieldAction(cardExpirationMonthField));
+        copyCardExpirationYear.addActionListener(new CopyFieldAction(cardExpirationYearField));
+        copyCardCvv.addActionListener(new CopyFieldAction(cardCvvField));
+        copyIdentityAddress1.addActionListener(new CopyFieldAction(identityAddress1Field));
+        copyIdentityAddress2.addActionListener(new CopyFieldAction(identityAddress2Field));
+        copyIdentityAddress3.addActionListener(new CopyFieldAction(identityAddress3Field));
+        copyIdentityCity.addActionListener(new CopyFieldAction(identityCityField));
+        copyIdentityCompany.addActionListener(new CopyFieldAction(identityCompanyField));
+        copyIdentityCountry.addActionListener(new CopyFieldAction(identityCountryField));
+        copyIdentityEmail.addActionListener(new CopyFieldAction(identityEmailField));
+        copyIdentityFirstname.addActionListener(new CopyFieldAction(identityFirstnameField));
+        copyIdentityLastname.addActionListener(new CopyFieldAction(identityLastnameField));
+        copyIdentityLicenseNumber.addActionListener(new CopyFieldAction(identityLicenseNumberField));
+        copyIdentityMiddlename.addActionListener(new CopyFieldAction(identityMiddlenameField));
+        copyIdentityPassportNumber.addActionListener(new CopyFieldAction(identityPassportNumberField));
+        copyIdentitySsn.addActionListener(new CopyFieldAction(identitySsnField));
+        copyIdentityState.addActionListener(new CopyFieldAction(identityStateField));
+        copyIdentityPhone.addActionListener(new CopyFieldAction(identityPhoneField));
+        copyIdentityTitle.addActionListener(new CopyFieldAction(identityTitleField));
+        copyIdentityUsername.addActionListener(new CopyFieldAction(identityUsernameField));
+        copyIdentityZip.addActionListener(new CopyFieldAction(identityPostalcodeField));
         passwordMask = passwordField.getEchoChar();
         passwordVisible.addActionListener(ae -> {
             passwordField.setEchoChar(passwordVisible.isSelected() ? '\u0000' : passwordMask);
         });
         totpVisibleButton.addActionListener(ae -> {
             totpField.setEchoChar(totpVisibleButton.isSelected() ? '\u0000' : passwordMask);
+        });
+        cardNumberVisibleButton.addActionListener(ae -> {
+            cardNumberField.setEchoChar(cardNumberVisibleButton.isSelected() ? '\u0000' : passwordMask);
+        });
+        cardCvvVisible.addActionListener(ae -> {
+            cardCvvField.setEchoChar(cardCvvVisible.isSelected() ? '\u0000' : passwordMask);
+        });
+        identitySsnVisibile.addActionListener(ae -> {
+            identitySsnField.setEchoChar(identitySsnVisibile.isSelected() ? '\u0000' : passwordMask);
+        });
+        identityPassportNumberVisible.addActionListener(ae -> {
+            identityPassportNumberField.setEchoChar(identityPassportNumberVisible.isSelected() ? '\u0000' : passwordMask);
         });
         Configuration.getConfiguration().addObserver((name, value) -> {
             if(PROP_ALLOW_ACCESS.equals(name)) {
@@ -152,6 +188,8 @@ public class PasswordPanel extends javax.swing.JPanel {
         sshFingerprintField.setText("");
         showLoginFields(false);
         showSshFields(false);
+        showCardFields(false);
+        showIdentityFields(false);
         for(Component c: locationInfoWrapper.getComponents()) {
             if(c != locationInfoPlaceholder) {
                 locationInfoWrapper.remove(c);
@@ -212,11 +250,39 @@ public class PasswordPanel extends javax.swing.JPanel {
                 if(isNotNullNotEmpty(decryptedCipherData.getSshKey().getKeyFingerprint())) {
                     copySshFingerprint.setEnabled(true);
                 }
+            } else if (decryptedCipherData.getCard() != null) {
+                showCardFields(true);
+                cardBrandField.setText(decryptedCipherData.getCard().getBrand());
+                cardHoldernameField.setText(decryptedCipherData.getCard().getCardholderName());
+                cardExpirationMonthField.setText(decryptedCipherData.getCard().getExpMonth());
+                cardExpirationYearField.setText(decryptedCipherData.getCard().getExpYear());
+                cardCvvField.setText(decryptedCipherData.getCard().getCode());
+                cardNumberField.setText(decryptedCipherData.getCard().getNumber());
+            } else if (decryptedCipherData.getIdentity() != null) {
+                showIdentityFields(true);
+                identityAddress1Field.setText(decryptedCipherData.getIdentity().getAddress1());
+                identityAddress2Field.setText(decryptedCipherData.getIdentity().getAddress2());
+                identityAddress3Field.setText(decryptedCipherData.getIdentity().getAddress3());
+                identityCityField.setText(decryptedCipherData.getIdentity().getCity());
+                identityCompanyField.setText(decryptedCipherData.getIdentity().getCompany());
+                identityCountryField.setText(decryptedCipherData.getIdentity().getCountry());
+                identityEmailField.setText(decryptedCipherData.getIdentity().getEmail());
+                identityFirstnameField.setText(decryptedCipherData.getIdentity().getFirstName());
+                identityLastnameField.setText(decryptedCipherData.getIdentity().getLastName());
+                identityLicenseNumberField.setText(decryptedCipherData.getIdentity().getLicenseNumber());
+                identityMiddlenameField.setText(decryptedCipherData.getIdentity().getMiddleName());
+                identityPassportNumberField.setText(decryptedCipherData.getIdentity().getPassportNumber());
+                identitySsnField.setText(decryptedCipherData.getIdentity().getSsn());
+                identityStateField.setText(decryptedCipherData.getIdentity().getState());
+                identityPhoneField.setText(decryptedCipherData.getIdentity().getPhone());
+                identityTitleField.setText(decryptedCipherData.getIdentity().getTitle());
+                identityUsernameField.setText(decryptedCipherData.getIdentity().getUsername());
+                identityPostalcodeField.setText(decryptedCipherData.getIdentity().getPostalCode());
             }
         }
 
         updateTotpEvaluated();
-        int componentRow = 12;
+        int componentRow = 35;
         additionalComponents.forEach(c -> passwordPanel.remove(c));
 
         Insets defaultInsets = new Insets(5, 5, 5, 5);
@@ -447,6 +513,84 @@ public class PasswordPanel extends javax.swing.JPanel {
         copySshFingerprint.setVisible(state);
     }
 
+    public void showCardFields(boolean state) {
+        cardHoldernameLabel.setVisible(state);
+        cardHoldernameField.setVisible(state);
+        copyCardHoldername.setVisible(state);
+        cardBrandLabel.setVisible(state);
+        cardBrandField.setVisible(state);
+        copyCardBrand.setVisible(state);
+        cardExpirationLabel.setVisible(state);
+        cardExpirationPanel.setVisible(state);
+        cardCvvLabel.setVisible(state);
+        cardCvvField.setVisible(state);
+        copyCardCvv.setVisible(state);
+        cardCvvVisible.setVisible(state);
+        cardNumberLabel.setVisible(state);
+        cardNumberField.setVisible(state);
+        copyCardNumber.setVisible(state);
+        cardNumberVisibleButton.setVisible(state);
+    }
+
+    public void showIdentityFields(boolean state) {
+        identityTitleLabel.setVisible(state);
+        identityTitleField.setVisible(state);
+        copyIdentityTitle.setVisible(state);
+        identityFirstnameLabel.setVisible(state);
+        identityFirstnameField.setVisible(state);
+        copyIdentityFirstname.setVisible(state);
+        identityMiddlenameLabel.setVisible(state);
+        identityMiddlenameField.setVisible(state);
+        copyIdentityMiddlename.setVisible(state);
+        identityLastnameLabel.setVisible(state);
+        identityLastnameField.setVisible(state);
+        copyIdentityLastname.setVisible(state);
+        identityUsername.setVisible(state);
+        identityUsernameField.setVisible(state);
+        copyIdentityUsername.setVisible(state);
+        identityCompany.setVisible(state);
+        identityCompanyField.setVisible(state);
+        copyIdentityCompany.setVisible(state);
+        identitySsnLabel.setVisible(state);
+        identitySsnField.setVisible(state);
+        copyIdentitySsn.setVisible(state);
+        identitySsnVisibile.setVisible(state);
+        identityPassportNumberLabel.setVisible(state);
+        identityPassportNumberField.setVisible(state);
+        copyIdentityPassportNumber.setVisible(state);
+        identityPassportNumberVisible.setVisible(state);
+        identityLicenseNumberLabel.setVisible(state);
+        identityLicenseNumberField.setVisible(state);
+        copyIdentityLicenseNumber.setVisible(state);
+        identityEmailLabel.setVisible(state);
+        identityEmailField.setVisible(state);
+        copyIdentityEmail.setVisible(state);
+        identityPhoneLabel.setVisible(state);
+        identityPhoneField.setVisible(state);
+        copyIdentityPhone.setVisible(state);
+        identityAddress1Label.setVisible(state);
+        identityAddress1Field.setVisible(state);
+        copyIdentityAddress1.setVisible(state);
+        identityAddress2Label.setVisible(state);
+        identityAddress2Field.setVisible(state);
+        copyIdentityAddress2.setVisible(state);
+        identityAddress3Label.setVisible(state);
+        identityAddress3Field.setVisible(state);
+        copyIdentityAddress3.setVisible(state);
+        identityCityLabel.setVisible(state);
+        identityCityField.setVisible(state);
+        copyIdentityCity.setVisible(state);
+        identityPostalcodeLabel.setVisible(state);
+        identityPostalcodeField.setVisible(state);
+        copyIdentityZip.setVisible(state);
+        identityStateLabel.setVisible(state);
+        identityStateField.setVisible(state);
+        copyIdentityState.setVisible(state);
+        identityCountryLabel.setVisible(state);
+        identityCountryField.setVisible(state);
+        copyIdentityCountry.setVisible(state);
+    }
+
     private void updateTotpEvaluated() {
         String code = null;
         try {
@@ -529,6 +673,83 @@ public class PasswordPanel extends javax.swing.JPanel {
         notesScrollPane = new javax.swing.JScrollPane();
         notesField = new javax.swing.JTextArea();
         allowAccessCheckbox = new javax.swing.JCheckBox();
+        cardHoldernameLabel = new javax.swing.JLabel();
+        cardHoldernameField = new javax.swing.JTextField();
+        copyCardHoldername = new javax.swing.JButton();
+        cardBrandLabel = new javax.swing.JLabel();
+        cardBrandField = new javax.swing.JTextField();
+        copyCardBrand = new javax.swing.JButton();
+        cardNumberLabel = new javax.swing.JLabel();
+        cardNumberField = new javax.swing.JPasswordField();
+        copyCardNumber = new javax.swing.JButton();
+        cardExpirationLabel = new javax.swing.JLabel();
+        cardExpirationPanel = new javax.swing.JPanel();
+        cardExpirationMonthField = new javax.swing.JTextField();
+        copyCardExpirationMonth = new javax.swing.JButton();
+        expSplit = new javax.swing.JLabel();
+        cardExpirationYearField = new javax.swing.JTextField();
+        copyCardExpirationYear = new javax.swing.JButton();
+        cardCvvLabel = new javax.swing.JLabel();
+        cardCvvField = new javax.swing.JPasswordField();
+        copyCardCvv = new javax.swing.JButton();
+        cardNumberVisibleButton = new javax.swing.JToggleButton();
+        cardCvvVisible = new javax.swing.JToggleButton();
+        identityTitleLabel = new javax.swing.JLabel();
+        identityTitleField = new javax.swing.JTextField();
+        copyIdentityTitle = new javax.swing.JButton();
+        identityFirstnameLabel = new javax.swing.JLabel();
+        identityFirstnameField = new javax.swing.JTextField();
+        copyIdentityFirstname = new javax.swing.JButton();
+        identityMiddlenameLabel = new javax.swing.JLabel();
+        identityMiddlenameField = new javax.swing.JTextField();
+        copyIdentityMiddlename = new javax.swing.JButton();
+        identityLastnameLabel = new javax.swing.JLabel();
+        identityLastnameField = new javax.swing.JTextField();
+        copyIdentityLastname = new javax.swing.JButton();
+        identityUsername = new javax.swing.JLabel();
+        identityUsernameField = new javax.swing.JTextField();
+        copyIdentityUsername = new javax.swing.JButton();
+        identityCompany = new javax.swing.JLabel();
+        identityCompanyField = new javax.swing.JTextField();
+        copyIdentityCompany = new javax.swing.JButton();
+        identitySsnLabel = new javax.swing.JLabel();
+        identitySsnField = new javax.swing.JPasswordField();
+        copyIdentitySsn = new javax.swing.JButton();
+        identitySsnVisibile = new javax.swing.JToggleButton();
+        identityPassportNumberLabel = new javax.swing.JLabel();
+        identityPassportNumberField = new javax.swing.JPasswordField();
+        copyIdentityPassportNumber = new javax.swing.JButton();
+        identityPassportNumberVisible = new javax.swing.JToggleButton();
+        identityLicenseNumberLabel = new javax.swing.JLabel();
+        identityLicenseNumberField = new javax.swing.JTextField();
+        copyIdentityLicenseNumber = new javax.swing.JButton();
+        identityEmailLabel = new javax.swing.JLabel();
+        identityEmailField = new javax.swing.JTextField();
+        copyIdentityEmail = new javax.swing.JButton();
+        identityPhoneLabel = new javax.swing.JLabel();
+        identityPhoneField = new javax.swing.JTextField();
+        copyIdentityPhone = new javax.swing.JButton();
+        identityAddress1Label = new javax.swing.JLabel();
+        identityAddress1Field = new javax.swing.JTextField();
+        copyIdentityAddress1 = new javax.swing.JButton();
+        identityAddress2Label = new javax.swing.JLabel();
+        identityAddress2Field = new javax.swing.JTextField();
+        copyIdentityAddress2 = new javax.swing.JButton();
+        identityAddress3Label = new javax.swing.JLabel();
+        identityAddress3Field = new javax.swing.JTextField();
+        copyIdentityAddress3 = new javax.swing.JButton();
+        identityCityLabel = new javax.swing.JLabel();
+        identityCityField = new javax.swing.JTextField();
+        copyIdentityCity = new javax.swing.JButton();
+        identityPostalcodeLabel = new javax.swing.JLabel();
+        identityPostalcodeField = new javax.swing.JTextField();
+        copyIdentityZip = new javax.swing.JButton();
+        identityStateLabel = new javax.swing.JLabel();
+        identityStateField = new javax.swing.JTextField();
+        copyIdentityState = new javax.swing.JButton();
+        identityCountryLabel = new javax.swing.JLabel();
+        identityCountryField = new javax.swing.JTextField();
+        copyIdentityCountry = new javax.swing.JButton();
 
         setLayout(new java.awt.BorderLayout());
 
@@ -849,7 +1070,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         notesLabel.setText(bundle.getString("notesLabel")); // NOI18N
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 11;
+        gridBagConstraints.gridy = 34;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(notesLabel, gridBagConstraints);
@@ -860,7 +1081,7 @@ public class PasswordPanel extends javax.swing.JPanel {
         copyNotes.setPreferredSize(new java.awt.Dimension(24, 24));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
-        gridBagConstraints.gridy = 11;
+        gridBagConstraints.gridy = 34;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(copyNotes, gridBagConstraints);
@@ -874,7 +1095,7 @@ public class PasswordPanel extends javax.swing.JPanel {
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 11;
+        gridBagConstraints.gridy = 34;
         gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
@@ -892,6 +1113,756 @@ public class PasswordPanel extends javax.swing.JPanel {
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         passwordPanel.add(allowAccessCheckbox, gridBagConstraints);
 
+        cardHoldernameLabel.setText(bundle.getString("cardHoldername")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 11;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardHoldernameLabel, gridBagConstraints);
+
+        cardHoldernameField.setEditable(false);
+        cardHoldernameField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 11;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardHoldernameField, gridBagConstraints);
+
+        copyCardHoldername.setIcon(COPY_ICON);
+        copyCardHoldername.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyCardHoldername.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyCardHoldername.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 11;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyCardHoldername, gridBagConstraints);
+
+        cardBrandLabel.setText(bundle.getString("cardBrand")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 12;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardBrandLabel, gridBagConstraints);
+
+        cardBrandField.setEditable(false);
+        cardBrandField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 12;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardBrandField, gridBagConstraints);
+
+        copyCardBrand.setIcon(COPY_ICON);
+        copyCardBrand.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyCardBrand.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyCardBrand.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 12;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyCardBrand, gridBagConstraints);
+
+        cardNumberLabel.setText(bundle.getString("cardNumber")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 13;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardNumberLabel, gridBagConstraints);
+
+        cardNumberField.setEditable(false);
+        cardNumberField.setColumns(25);
+        cardNumberField.setToolTipText("");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 13;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardNumberField, gridBagConstraints);
+
+        copyCardNumber.setIcon(COPY_ICON);
+        copyCardNumber.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyCardNumber.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyCardNumber.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 13;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyCardNumber, gridBagConstraints);
+
+        cardExpirationLabel.setText(bundle.getString("cardExpiration")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 14;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardExpirationLabel, gridBagConstraints);
+
+        cardExpirationMonthField.setEditable(false);
+        cardExpirationMonthField.setColumns(4);
+        cardExpirationPanel.add(cardExpirationMonthField);
+
+        copyCardExpirationMonth.setIcon(COPY_ICON);
+        copyCardExpirationMonth.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyCardExpirationMonth.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyCardExpirationMonth.setPreferredSize(new java.awt.Dimension(24, 24));
+        cardExpirationPanel.add(copyCardExpirationMonth);
+
+        expSplit.setText("/");
+        cardExpirationPanel.add(expSplit);
+
+        cardExpirationYearField.setEditable(false);
+        cardExpirationYearField.setColumns(6);
+        cardExpirationPanel.add(cardExpirationYearField);
+
+        copyCardExpirationYear.setIcon(COPY_ICON);
+        copyCardExpirationYear.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyCardExpirationYear.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyCardExpirationYear.setPreferredSize(new java.awt.Dimension(24, 24));
+        cardExpirationPanel.add(copyCardExpirationYear);
+
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 14;
+        gridBagConstraints.gridwidth = 3;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        passwordPanel.add(cardExpirationPanel, gridBagConstraints);
+
+        cardCvvLabel.setText(bundle.getString("cardCVV")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 15;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardCvvLabel, gridBagConstraints);
+
+        cardCvvField.setEditable(false);
+        cardCvvField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 15;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardCvvField, gridBagConstraints);
+
+        copyCardCvv.setIcon(COPY_ICON);
+        copyCardCvv.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyCardCvv.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyCardCvv.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 15;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyCardCvv, gridBagConstraints);
+
+        cardNumberVisibleButton.setIcon(CLOSED_EYE_ICON);
+        cardNumberVisibleButton.setMaximumSize(new java.awt.Dimension(24, 24));
+        cardNumberVisibleButton.setMinimumSize(new java.awt.Dimension(24, 24));
+        cardNumberVisibleButton.setPreferredSize(new java.awt.Dimension(24, 24));
+        cardNumberVisibleButton.setSelectedIcon(OPEN_EYE_ICON);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 13;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardNumberVisibleButton, gridBagConstraints);
+
+        cardCvvVisible.setIcon(CLOSED_EYE_ICON);
+        cardCvvVisible.setMaximumSize(new java.awt.Dimension(24, 24));
+        cardCvvVisible.setMinimumSize(new java.awt.Dimension(24, 24));
+        cardCvvVisible.setPreferredSize(new java.awt.Dimension(24, 24));
+        cardCvvVisible.setSelectedIcon(OPEN_EYE_ICON);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 15;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(cardCvvVisible, gridBagConstraints);
+
+        identityTitleLabel.setText(bundle.getString("identityTitle")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 16;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityTitleLabel, gridBagConstraints);
+
+        identityTitleField.setEditable(false);
+        identityTitleField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 16;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityTitleField, gridBagConstraints);
+
+        copyIdentityTitle.setIcon(COPY_ICON);
+        copyIdentityTitle.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityTitle.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityTitle.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 16;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityTitle, gridBagConstraints);
+
+        identityFirstnameLabel.setText(bundle.getString("identityFirstname")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 17;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityFirstnameLabel, gridBagConstraints);
+
+        identityFirstnameField.setEditable(false);
+        identityFirstnameField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 17;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityFirstnameField, gridBagConstraints);
+
+        copyIdentityFirstname.setIcon(COPY_ICON);
+        copyIdentityFirstname.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityFirstname.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityFirstname.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 17;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityFirstname, gridBagConstraints);
+
+        identityMiddlenameLabel.setText(bundle.getString("identityMiddleName")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 18;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityMiddlenameLabel, gridBagConstraints);
+
+        identityMiddlenameField.setEditable(false);
+        identityMiddlenameField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 18;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityMiddlenameField, gridBagConstraints);
+
+        copyIdentityMiddlename.setIcon(COPY_ICON);
+        copyIdentityMiddlename.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityMiddlename.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityMiddlename.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 18;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityMiddlename, gridBagConstraints);
+
+        identityLastnameLabel.setText(bundle.getString("identityLastname")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 19;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityLastnameLabel, gridBagConstraints);
+
+        identityLastnameField.setEditable(false);
+        identityLastnameField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 19;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityLastnameField, gridBagConstraints);
+
+        copyIdentityLastname.setIcon(COPY_ICON);
+        copyIdentityLastname.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityLastname.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityLastname.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 19;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityLastname, gridBagConstraints);
+
+        identityUsername.setText(bundle.getString("identityUsername")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 20;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityUsername, gridBagConstraints);
+
+        identityUsernameField.setEditable(false);
+        identityUsernameField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 20;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityUsernameField, gridBagConstraints);
+
+        copyIdentityUsername.setIcon(COPY_ICON);
+        copyIdentityUsername.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityUsername.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityUsername.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 20;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityUsername, gridBagConstraints);
+
+        identityCompany.setText(bundle.getString("identityCompany")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 21;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityCompany, gridBagConstraints);
+
+        identityCompanyField.setEditable(false);
+        identityCompanyField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 21;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityCompanyField, gridBagConstraints);
+
+        copyIdentityCompany.setIcon(COPY_ICON);
+        copyIdentityCompany.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityCompany.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityCompany.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 21;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityCompany, gridBagConstraints);
+
+        identitySsnLabel.setText(bundle.getString("identitySsn")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 22;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identitySsnLabel, gridBagConstraints);
+
+        identitySsnField.setEditable(false);
+        identitySsnField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 22;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identitySsnField, gridBagConstraints);
+
+        copyIdentitySsn.setIcon(COPY_ICON);
+        copyIdentitySsn.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentitySsn.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentitySsn.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 22;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentitySsn, gridBagConstraints);
+
+        identitySsnVisibile.setIcon(CLOSED_EYE_ICON);
+        identitySsnVisibile.setMaximumSize(new java.awt.Dimension(24, 24));
+        identitySsnVisibile.setMinimumSize(new java.awt.Dimension(24, 24));
+        identitySsnVisibile.setPreferredSize(new java.awt.Dimension(24, 24));
+        identitySsnVisibile.setSelectedIcon(OPEN_EYE_ICON);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 22;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identitySsnVisibile, gridBagConstraints);
+
+        identityPassportNumberLabel.setText(bundle.getString("identityPassportNumber")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 23;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityPassportNumberLabel, gridBagConstraints);
+
+        identityPassportNumberField.setEditable(false);
+        identityPassportNumberField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 23;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityPassportNumberField, gridBagConstraints);
+
+        copyIdentityPassportNumber.setIcon(COPY_ICON);
+        copyIdentityPassportNumber.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityPassportNumber.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityPassportNumber.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 23;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityPassportNumber, gridBagConstraints);
+
+        identityPassportNumberVisible.setIcon(CLOSED_EYE_ICON);
+        identityPassportNumberVisible.setMaximumSize(new java.awt.Dimension(24, 24));
+        identityPassportNumberVisible.setMinimumSize(new java.awt.Dimension(24, 24));
+        identityPassportNumberVisible.setPreferredSize(new java.awt.Dimension(24, 24));
+        identityPassportNumberVisible.setSelectedIcon(OPEN_EYE_ICON);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 23;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityPassportNumberVisible, gridBagConstraints);
+
+        identityLicenseNumberLabel.setText(bundle.getString("identityLicenseNumber")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 24;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityLicenseNumberLabel, gridBagConstraints);
+
+        identityLicenseNumberField.setEditable(false);
+        identityLicenseNumberField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 24;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityLicenseNumberField, gridBagConstraints);
+
+        copyIdentityLicenseNumber.setIcon(COPY_ICON);
+        copyIdentityLicenseNumber.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityLicenseNumber.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityLicenseNumber.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 24;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityLicenseNumber, gridBagConstraints);
+
+        identityEmailLabel.setText(bundle.getString("identityEmail")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 25;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityEmailLabel, gridBagConstraints);
+
+        identityEmailField.setEditable(false);
+        identityEmailField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 25;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityEmailField, gridBagConstraints);
+
+        copyIdentityEmail.setIcon(COPY_ICON);
+        copyIdentityEmail.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityEmail.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityEmail.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 25;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityEmail, gridBagConstraints);
+
+        identityPhoneLabel.setText(bundle.getString("identityTelephone")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 26;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityPhoneLabel, gridBagConstraints);
+
+        identityPhoneField.setEditable(false);
+        identityPhoneField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 26;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityPhoneField, gridBagConstraints);
+
+        copyIdentityPhone.setIcon(COPY_ICON);
+        copyIdentityPhone.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityPhone.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityPhone.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 26;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityPhone, gridBagConstraints);
+
+        identityAddress1Label.setText(bundle.getString("identityAdress1")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 27;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityAddress1Label, gridBagConstraints);
+
+        identityAddress1Field.setEditable(false);
+        identityAddress1Field.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 27;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityAddress1Field, gridBagConstraints);
+
+        copyIdentityAddress1.setIcon(COPY_ICON);
+        copyIdentityAddress1.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityAddress1.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityAddress1.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 27;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityAddress1, gridBagConstraints);
+
+        identityAddress2Label.setText(bundle.getString("identityAddress2")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 28;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityAddress2Label, gridBagConstraints);
+
+        identityAddress2Field.setEditable(false);
+        identityAddress2Field.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 28;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityAddress2Field, gridBagConstraints);
+
+        copyIdentityAddress2.setIcon(COPY_ICON);
+        copyIdentityAddress2.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityAddress2.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityAddress2.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 28;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityAddress2, gridBagConstraints);
+
+        identityAddress3Label.setText(bundle.getString("identityAddress3")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 29;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityAddress3Label, gridBagConstraints);
+
+        identityAddress3Field.setEditable(false);
+        identityAddress3Field.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 29;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityAddress3Field, gridBagConstraints);
+
+        copyIdentityAddress3.setIcon(COPY_ICON);
+        copyIdentityAddress3.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityAddress3.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityAddress3.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 29;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityAddress3, gridBagConstraints);
+
+        identityCityLabel.setText(bundle.getString("identityCity")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 30;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityCityLabel, gridBagConstraints);
+
+        identityCityField.setEditable(false);
+        identityCityField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 30;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityCityField, gridBagConstraints);
+
+        copyIdentityCity.setIcon(COPY_ICON);
+        copyIdentityCity.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityCity.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityCity.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 30;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityCity, gridBagConstraints);
+
+        identityPostalcodeLabel.setText(bundle.getString("identityZip")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 31;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityPostalcodeLabel, gridBagConstraints);
+
+        identityPostalcodeField.setEditable(false);
+        identityPostalcodeField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 31;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityPostalcodeField, gridBagConstraints);
+
+        copyIdentityZip.setIcon(COPY_ICON);
+        copyIdentityZip.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityZip.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityZip.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 31;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityZip, gridBagConstraints);
+
+        identityStateLabel.setText(bundle.getString("identityState")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 32;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityStateLabel, gridBagConstraints);
+
+        identityStateField.setEditable(false);
+        identityStateField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 32;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityStateField, gridBagConstraints);
+
+        copyIdentityState.setIcon(COPY_ICON);
+        copyIdentityState.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityState.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityState.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 32;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityState, gridBagConstraints);
+
+        identityCountryLabel.setText(bundle.getString("identityCountry")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 33;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityCountryLabel, gridBagConstraints);
+
+        identityCountryField.setEditable(false);
+        identityCountryField.setColumns(25);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 33;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(identityCountryField, gridBagConstraints);
+
+        copyIdentityCountry.setIcon(COPY_ICON);
+        copyIdentityCountry.setMaximumSize(new java.awt.Dimension(24, 24));
+        copyIdentityCountry.setMinimumSize(new java.awt.Dimension(24, 24));
+        copyIdentityCountry.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 3;
+        gridBagConstraints.gridy = 33;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.BASELINE_LEADING;
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
+        passwordPanel.add(copyIdentityCountry, gridBagConstraints);
+
         passwordPanelScrollPane.setViewportView(passwordPanel);
 
         add(passwordPanelScrollPane, java.awt.BorderLayout.CENTER);
@@ -900,7 +1871,45 @@ public class PasswordPanel extends javax.swing.JPanel {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox allowAccessCheckbox;
+    private javax.swing.JTextField cardBrandField;
+    private javax.swing.JLabel cardBrandLabel;
+    private javax.swing.JPasswordField cardCvvField;
+    private javax.swing.JLabel cardCvvLabel;
+    private javax.swing.JToggleButton cardCvvVisible;
+    private javax.swing.JLabel cardExpirationLabel;
+    private javax.swing.JTextField cardExpirationMonthField;
+    private javax.swing.JPanel cardExpirationPanel;
+    private javax.swing.JTextField cardExpirationYearField;
+    private javax.swing.JTextField cardHoldernameField;
+    private javax.swing.JLabel cardHoldernameLabel;
+    private javax.swing.JPasswordField cardNumberField;
+    private javax.swing.JLabel cardNumberLabel;
+    private javax.swing.JToggleButton cardNumberVisibleButton;
+    private javax.swing.JButton copyCardBrand;
+    private javax.swing.JButton copyCardCvv;
+    private javax.swing.JButton copyCardExpirationMonth;
+    private javax.swing.JButton copyCardExpirationYear;
+    private javax.swing.JButton copyCardHoldername;
+    private javax.swing.JButton copyCardNumber;
     private javax.swing.JButton copyIdButton;
+    private javax.swing.JButton copyIdentityAddress1;
+    private javax.swing.JButton copyIdentityAddress2;
+    private javax.swing.JButton copyIdentityAddress3;
+    private javax.swing.JButton copyIdentityCity;
+    private javax.swing.JButton copyIdentityCompany;
+    private javax.swing.JButton copyIdentityCountry;
+    private javax.swing.JButton copyIdentityEmail;
+    private javax.swing.JButton copyIdentityFirstname;
+    private javax.swing.JButton copyIdentityLastname;
+    private javax.swing.JButton copyIdentityLicenseNumber;
+    private javax.swing.JButton copyIdentityMiddlename;
+    private javax.swing.JButton copyIdentityPassportNumber;
+    private javax.swing.JButton copyIdentityPhone;
+    private javax.swing.JButton copyIdentitySsn;
+    private javax.swing.JButton copyIdentityState;
+    private javax.swing.JButton copyIdentityTitle;
+    private javax.swing.JButton copyIdentityUsername;
+    private javax.swing.JButton copyIdentityZip;
     private javax.swing.JButton copyNotes;
     private javax.swing.JButton copyPasswordButton;
     private javax.swing.JButton copySshFingerprint;
@@ -909,9 +1918,48 @@ public class PasswordPanel extends javax.swing.JPanel {
     private javax.swing.JButton copyTotpButton;
     private javax.swing.JButton copyTotpEvaluatedButton;
     private javax.swing.JButton copyUsernameButton;
+    private javax.swing.JLabel expSplit;
     private javax.swing.Box.Filler fillerMiddle;
     private javax.swing.JTextField idField;
     private javax.swing.JLabel idLabel;
+    private javax.swing.JTextField identityAddress1Field;
+    private javax.swing.JLabel identityAddress1Label;
+    private javax.swing.JTextField identityAddress2Field;
+    private javax.swing.JLabel identityAddress2Label;
+    private javax.swing.JTextField identityAddress3Field;
+    private javax.swing.JLabel identityAddress3Label;
+    private javax.swing.JTextField identityCityField;
+    private javax.swing.JLabel identityCityLabel;
+    private javax.swing.JLabel identityCompany;
+    private javax.swing.JTextField identityCompanyField;
+    private javax.swing.JTextField identityCountryField;
+    private javax.swing.JLabel identityCountryLabel;
+    private javax.swing.JTextField identityEmailField;
+    private javax.swing.JLabel identityEmailLabel;
+    private javax.swing.JTextField identityFirstnameField;
+    private javax.swing.JLabel identityFirstnameLabel;
+    private javax.swing.JTextField identityLastnameField;
+    private javax.swing.JLabel identityLastnameLabel;
+    private javax.swing.JTextField identityLicenseNumberField;
+    private javax.swing.JLabel identityLicenseNumberLabel;
+    private javax.swing.JTextField identityMiddlenameField;
+    private javax.swing.JLabel identityMiddlenameLabel;
+    private javax.swing.JPasswordField identityPassportNumberField;
+    private javax.swing.JLabel identityPassportNumberLabel;
+    private javax.swing.JToggleButton identityPassportNumberVisible;
+    private javax.swing.JTextField identityPhoneField;
+    private javax.swing.JLabel identityPhoneLabel;
+    private javax.swing.JTextField identityPostalcodeField;
+    private javax.swing.JLabel identityPostalcodeLabel;
+    private javax.swing.JPasswordField identitySsnField;
+    private javax.swing.JLabel identitySsnLabel;
+    private javax.swing.JToggleButton identitySsnVisibile;
+    private javax.swing.JTextField identityStateField;
+    private javax.swing.JLabel identityStateLabel;
+    private javax.swing.JTextField identityTitleField;
+    private javax.swing.JLabel identityTitleLabel;
+    private javax.swing.JLabel identityUsername;
+    private javax.swing.JTextField identityUsernameField;
     private javax.swing.JLabel locationInfoPlaceholder;
     private javax.swing.JPanel locationInfoWrapper;
     private javax.swing.JTextArea notesField;

@@ -33,7 +33,6 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -118,7 +117,7 @@ public class UnixDomainSocketServer extends Thread {
                 while (true) {
                     SocketChannel ch = listenChannel.accept();
                     executor.execute(() -> {
-                        try {
+                        try (ch) {
                             ByteBuffer bb = ByteBuffer.allocate(4096);
                             ch.read(bb);
                             bb.flip();
@@ -140,9 +139,8 @@ public class UnixDomainSocketServer extends Thread {
                                 LOG.log(Level.WARNING, "Entry does not have expected format (ENTRYID/AREA/ATTRIBUTE): {0}", input);
                             }
                             ch.write(ByteBuffer.wrap(result.getBytes(UTF_8)));
-                            ch.close();
-                        } catch (IOException | RuntimeException ex1) {
-                            System.getLogger(UnixDomainSocketServer.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex1);
+                        } catch (IOException ex) {
+                            System.getLogger(UnixDomainSocketServer.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
                         }
                     });
                 }
@@ -165,13 +163,45 @@ public class UnixDomainSocketServer extends Thread {
                     case "password" -> dcd.getLogin().getPassword();
                     case "totp" -> dcd.getLogin().getTotp();
                     case "totpToken" -> TOTPUtil.calculateTOTP(dcd.getLogin().getTotp());
-                    default -> "-";
+                    default -> "";
                 };
             case "sshKey" ->
                 switch (target[2]) { // detail level 1
                     case "keyFingerprint" -> dcd.getSshKey().getKeyFingerprint();
                     case "privateKey" -> dcd.getSshKey().getPrivateKey();
                     case "publicKey" -> dcd.getSshKey().getPublicKey();
+                    default -> "";
+                };
+            case "card" ->
+                switch(target[2]) { // detail level 1
+                    case "brand" -> dcd.getCard().getBrand();
+                    case "cardholderName" -> dcd.getCard().getCardholderName();
+                    case "number" -> dcd.getCard().getNumber();
+                    case "code" -> dcd.getCard().getCode();
+                    case "expMonth" -> dcd.getCard().getExpMonth();
+                    case "expYear" -> dcd.getCard().getExpYear();
+                    default -> "";
+                };
+            case "identity" ->
+                switch (target[2]) { // detail level 1
+                    case "title" -> dcd.getIdentity().getTitle();
+                    case "firstName" -> dcd.getIdentity().getFirstName();
+                    case "middleName" -> dcd.getIdentity().getMiddleName();
+                    case "lastName" -> dcd.getIdentity().getLastName();
+                    case "address1" -> dcd.getIdentity().getAddress1();
+                    case "address2" -> dcd.getIdentity().getAddress2();
+                    case "address3" -> dcd.getIdentity().getAddress3();
+                    case "city" -> dcd.getIdentity().getCity();
+                    case "state" -> dcd.getIdentity().getState();
+                    case "postalCode" -> dcd.getIdentity().getPostalCode();
+                    case "country" -> dcd.getIdentity().getCountry();
+                    case "company" -> dcd.getIdentity().getCompany();
+                    case "email" -> dcd.getIdentity().getEmail();
+                    case "phone" -> dcd.getIdentity().getPhone();
+                    case "ssn" -> dcd.getIdentity().getSsn();
+                    case "username" -> dcd.getIdentity().getUsername();
+                    case "passportNumber" -> dcd.getIdentity().getPassportNumber();
+                    case "licenseNumber" -> dcd.getIdentity().getLicenseNumber();
                     default -> "";
                 };
             case "notes" -> dcd.getNotes();

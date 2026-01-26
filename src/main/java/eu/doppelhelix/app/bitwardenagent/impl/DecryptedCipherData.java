@@ -27,6 +27,8 @@ public class DecryptedCipherData {
     private String organization;
     private DecryptedLoginData login;
     private DecryptedSshKey sshKey;
+    private DecryptedCardData card;
+    private DecryptedIdentityData identity;
     private String notes;
     private final List<DecryptedFieldData> fields = new ArrayList<> ();
     private String folderId;
@@ -160,6 +162,22 @@ public class DecryptedCipherData {
 
     public void setArchivedDate(OffsetDateTime archivedDate) {
         this.archivedDate = archivedDate;
+    }
+
+    public DecryptedCardData getCard() {
+        return card;
+    }
+
+    public void setCard(DecryptedCardData card) {
+        this.card = card;
+    }
+
+    public DecryptedIdentityData getIdentity() {
+        return identity;
+    }
+
+    public void setIdentity(DecryptedIdentityData identity) {
+        this.identity = identity;
     }
 
 }

@@ -30,6 +30,8 @@ public record CipherData(
         LoginData login,
         @JsonProperty("sshKey")
         SshKey sshKey,
+        IdentityData identity,
+        CardData card,
         List<FieldData> fields,
         String folderId,
         List<String> collectionIds,

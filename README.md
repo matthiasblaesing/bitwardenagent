@@ -28,6 +28,32 @@ The selectors are:
   - `keyFingerprint`
   - `privateKey`
   - `publicKey`
+- `card`
+  - `brand`
+  - `cardholderName`
+  - `number`
+  - `code`
+  - `expMonth`
+  - `expYear`
+- `identity`
+  - `title`
+  - `firstName`
+  - `middleName`
+  - `lastName`
+  - `address1`
+  - `address2`
+  - `address3`
+  - `city`
+  - `state`
+  - `postalCode`
+  - `country`
+  - `company`
+  - `email`
+  - `phone`
+  - `ssn`
+  - `username`
+  - `passportNumber`
+  - `licenseNumber`
 - `notes`: string field
 - `fields`: the group entry is followed by the index or name of the target
             field. Follwing that the detail field is specified:

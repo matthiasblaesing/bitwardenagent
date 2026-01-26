@@ -134,6 +134,24 @@ public class PasswordListPanel extends javax.swing.JPanel {
                     subtitle.setText(emptyNullToSpace(dcd.getLogin().getUsername()));
                 } else if(dcd.getSshKey() != null) {
                     subtitle.setText(emptyNullToSpace(dcd.getSshKey().getKeyFingerprint()));
+                } else if(dcd.getCard() != null) {
+                    List<String> elements = new ArrayList<>(2);
+                    if(dcd.getCard().getBrand() != null && ! dcd.getCard().getBrand().isBlank()) {
+                        elements.add(dcd.getCard().getBrand());
+                    }
+                    if(dcd.getCard().getNumber() != null && dcd.getCard().getNumber().length() > 8) {
+                        elements.add("*" + dcd.getCard().getNumber().substring(dcd.getCard().getNumber().length() - 4));
+                    }
+                    subtitle.setText(String.join(", ", elements));
+                } else if(dcd.getIdentity() != null) {
+                    List<String> elements = new ArrayList<>(2);
+                    if(dcd.getIdentity().getFirstName() != null && ! dcd.getIdentity().getFirstName().isBlank()) {
+                        elements.add(dcd.getIdentity().getFirstName());
+                    }
+                    if(dcd.getIdentity().getLastName() != null && ! dcd.getIdentity().getLastName().isBlank()) {
+                        elements.add(dcd.getIdentity().getLastName());
+                    }
+                    subtitle.setText(String.join(" ", elements));
                 } else {
                     subtitle.setText(" ");
                 }

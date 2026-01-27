@@ -58,6 +58,7 @@ import javax.swing.tree.TreePath;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.FOLDER_ICON;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.OFFICE_BUILDING_ICON;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.FOLDER_NETWORK_ICON;
+import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.FILTER_REMOVE_ICON;
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.ofNullable;
 import static eu.doppelhelix.app.bitwardenagent.impl.UtilUI.emptyNullToSpace;
@@ -80,6 +81,10 @@ public class PasswordListPanel extends javax.swing.JPanel {
         this.client = client;
         initComponents();
         updateVisiblePanel();
+        passwordListQuickFilterClear.addActionListener(ae -> {
+            passwordListQuickFilter.setText("");
+            updateFilteredList();
+        });
         passwordListScrollPane.getHorizontalScrollBar().setUnitIncrement(getFont().getSize());
         passwordListScrollPane.getHorizontalScrollBar().setUnitIncrement(getFont().getSize());
         passwordList.addListSelectionListener(lse -> {
@@ -410,6 +415,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
         passwordListQuickFilter = new javax.swing.JTextField();
         passwordListGroupSelectorWrapper = new javax.swing.JScrollPane();
         passwordListGroupSelector = new javax.swing.JTree();
+        passwordListQuickFilterClear = new javax.swing.JButton();
         passwordListWarpper2 = new javax.swing.JPanel();
         passwordListScrollPane = new javax.swing.JScrollPane();
         passwordList = new javax.swing.JList<>();
@@ -430,9 +436,9 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
         gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(5, 5, 0, 5);
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 0, 0);
         passwordListFilterPanel.add(passwordListQuickFilter, gridBagConstraints);
 
         passwordListGroupSelector.setModel(passwordListGroupModel);
@@ -441,11 +447,23 @@ public class PasswordListPanel extends javax.swing.JPanel {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.weighty = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 3);
         passwordListFilterPanel.add(passwordListGroupSelectorWrapper, gridBagConstraints);
+
+        passwordListQuickFilterClear.setIcon(FILTER_REMOVE_ICON);
+        passwordListQuickFilterClear.setMaximumSize(new java.awt.Dimension(24, 24));
+        passwordListQuickFilterClear.setMinimumSize(new java.awt.Dimension(24, 24));
+        passwordListQuickFilterClear.setPreferredSize(new java.awt.Dimension(24, 24));
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.insets = new java.awt.Insets(5, 0, 0, 5);
+        passwordListFilterPanel.add(passwordListQuickFilterClear, gridBagConstraints);
 
         passwordListPanel.setLeftComponent(passwordListFilterPanel);
 
@@ -494,6 +512,7 @@ public class PasswordListPanel extends javax.swing.JPanel {
     private javax.swing.JScrollPane passwordListGroupSelectorWrapper;
     private javax.swing.JSplitPane passwordListPanel;
     private javax.swing.JTextField passwordListQuickFilter;
+    private javax.swing.JButton passwordListQuickFilterClear;
     private javax.swing.JScrollPane passwordListScrollPane;
     private javax.swing.JPanel passwordListWarpper2;
     private javax.swing.JSplitPane passwordListWrapper;

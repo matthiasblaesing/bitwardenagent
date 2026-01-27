@@ -17,6 +17,9 @@ package eu.doppelhelix.app.bitwardenagent;
 
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenAuthenticator;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Arrays;
@@ -32,64 +35,65 @@ public class EmailMasterPassPanel extends javax.swing.JPanel {
     private final BitwardenAuthenticator authenticator;
     private final boolean ssoVariant;
 
-    /**
-     * Creates new form MethodSelectionPanel
-     */
     public EmailMasterPassPanel(BitwardenAuthenticator authenticator, boolean ssoVariant) {
         this.authenticator = authenticator;
         this.ssoVariant = ssoVariant;
         initComponents();
-        emailInput.addActionListener(ae -> {
-            if(emailInput.isEnabled()) {
-                enableProgressButtonsIfBaseCheckOk();
-            }
-        });
-        masterPassInput.addActionListener(ae -> {
-            if(masterPassInput.isEnabled()) {
-                enableProgressButtonsIfBaseCheckOk();
-            }
-        });
-        cancelButton.addActionListener((ae) -> {
-            setWarnings(null);
-            enableInputs(false);
-            UtilUI.runOffTheEdt(
-                    () -> authenticator.cancel(),
-                    () -> enableInputs(true),
-                    (exception) -> {
-                        enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
-                        LOG.log(Level.WARNING, "Failed to cancel", exception);
-                    }
-            );
-        });
-        continueButton.addActionListener(ae -> {
-            setWarnings(null);
-            enableInputs(false);
-            String email = emailInput.getText();
-            char[] password = masterPassInput.getPassword();
-            UtilUI.runOffTheEdt(
-                    () -> {
-                        try {
-                            if (ssoVariant) {
-                                authenticator.setEmailMasterPassSSO(email, password);
-                            } else {
-                                authenticator.setEmailMasterPass(email, password);
-                            }
-                        } finally {
-                            Arrays.fill(password, '\0');
-                        }
-                    },
-                    () -> enableInputs(true),
-                    (exception) -> {
-                        enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedSetMasterPass")));
-                        LOG.log(Level.WARNING, "Failed to set master password", exception);
-                    }
-            );
-        });
         emailInput.addActionListener(ae -> enableProgressButtonsIfBaseCheckOk());
         masterPassInput.addActionListener(ae -> enableProgressButtonsIfBaseCheckOk());
+        cancelButton.addActionListener((ae) -> executeCancel());
+        continueButton.addActionListener(ae -> executeContinue());
+        KeyListener submitListener = new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    executeContinue();
+                }
+            }
+        };
+        emailInput.addKeyListener(submitListener);
+        masterPassInput.addKeyListener(submitListener);
         setWarnings(null);
+    }
+
+    private void executeCancel() {
+        setWarnings(null);
+        enableInputs(false);
+        UtilUI.runOffTheEdt(
+                () -> authenticator.cancel(),
+                () -> enableInputs(true),
+                (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
+                    LOG.log(Level.WARNING, "Failed to cancel", exception);
+                }
+        );
+    }
+
+    private void executeContinue() {
+        setWarnings(null);
+        enableInputs(false);
+        String email = emailInput.getText();
+        char[] password = masterPassInput.getPassword();
+        UtilUI.runOffTheEdt(
+                () -> {
+                    try {
+                        if (ssoVariant) {
+                            authenticator.setEmailMasterPassSSO(email, password);
+                        } else {
+                            authenticator.setEmailMasterPass(email, password);
+                        }
+                    } finally {
+                        Arrays.fill(password, '\0');
+                    }
+                },
+                () -> enableInputs(true),
+                (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedSetMasterPass")));
+                    LOG.log(Level.WARNING, "Failed to set master password", exception);
+                }
+        );
     }
 
     private void enableInputs(boolean enabled) {

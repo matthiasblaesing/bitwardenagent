@@ -17,9 +17,10 @@ package eu.doppelhelix.app.bitwardenagent;
 
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenAuthenticator;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -31,46 +32,50 @@ public class OTPPanel extends javax.swing.JPanel {
 
     private final BitwardenAuthenticator authenticator;
 
-    /**
-     * Creates new form MethodSelectionPanel
-     */
     public OTPPanel(BitwardenAuthenticator authenticator) {
         this.authenticator = authenticator;
         initComponents();
-        verificationCodeInput.addActionListener(ae -> {
-            if(verificationCodeInput.isEnabled()) {
-                enableProgressButtonsIfBaseCheckOk();
+        verificationCodeInput.addActionListener(ae -> enableProgressButtonsIfBaseCheckOk());
+        cancelButton.addActionListener((ae) -> executeCancel());
+        continueButton.addActionListener(ae -> executeContinue());
+        verificationCodeInput.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    executeContinue();
+                }
             }
         });
-        cancelButton.addActionListener((ae) -> {
-            setWarnings(null);
-            enableInputs(false);
-            UtilUI.runOffTheEdt(
-                    () -> authenticator.cancel(),
-                    () -> enableInputs(true),
-                    (exception) -> {
-                        enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
-                        LOG.log(Level.WARNING, "Failed to cancel", exception);
-                    }
-            );
-        });
-        continueButton.addActionListener(ae -> {
-            setWarnings(null);
-            enableInputs(false);
-            String verificationCode = verificationCodeInput.getText();
-            UtilUI.runOffTheEdt(
-                    () -> authenticator.setDeviceOTP(verificationCode),
-                    () -> enableInputs(true),
-                    (exception) -> {
-                        enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedSetVerificationCode")));
-                        LOG.log(Level.WARNING, "Failed to set verification code", exception);
-                    }
-            );
-        });
-        verificationCodeInput.addActionListener(ae -> enableProgressButtonsIfBaseCheckOk());
         setWarnings(null);
+    }
+
+    private void executeCancel() {
+        setWarnings(null);
+        enableInputs(false);
+        UtilUI.runOffTheEdt(
+                () -> authenticator.cancel(),
+                () -> enableInputs(true),
+                (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
+                    LOG.log(Level.WARNING, "Failed to cancel", exception);
+                }
+        );
+    }
+
+    private void executeContinue() {
+        setWarnings(null);
+        enableInputs(false);
+        String verificationCode = verificationCodeInput.getText();
+        UtilUI.runOffTheEdt(
+                () -> authenticator.setDeviceOTP(verificationCode),
+                () -> enableInputs(true),
+                (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedSetVerificationCode")));
+                    LOG.log(Level.WARNING, "Failed to set verification code", exception);
+                }
+        );
     }
 
     private void enableInputs(boolean enabled) {

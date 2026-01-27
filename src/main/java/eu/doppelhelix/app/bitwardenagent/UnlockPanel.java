@@ -17,6 +17,8 @@ package eu.doppelhelix.app.bitwardenagent;
 
 import eu.doppelhelix.app.bitwardenagent.impl.BitwardenClient;
 import eu.doppelhelix.app.bitwardenagent.impl.UtilUI;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -32,9 +34,6 @@ public class UnlockPanel extends javax.swing.JPanel {
 
     private final BitwardenClient client;
 
-    /**
-     * Creates new form MasterPasswortPanel
-     */
     public UnlockPanel(BitwardenClient client) {
         this.client = client;
         initComponents();
@@ -43,41 +42,51 @@ public class UnlockPanel extends javax.swing.JPanel {
                 enableProgressButtonsIfBaseCheckOk();
             }
         });
-        logoutButton.addActionListener((ae) -> {
-            setWarnings(null);
-            enableInputs(false);
-            UtilUI.runOffTheEdt(
-                    () -> client.clear(),
-                    () -> enableInputs(true),
-                    (exception) -> {
-                        enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedLogout")));
-                        LOG.log(System.Logger.Level.WARNING, "Failed to logout", exception);
-                    }
-            );
+        logoutButton.addActionListener((ae) -> executeLogout());
+        unlockButton.addActionListener(ae -> executeUnlock());
+        masterPassInput.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    executeUnlock();
+                }
+            }
         });
-        unlockButton.addActionListener(ae -> {
-            setWarnings(null);
-            enableInputs(false);
-            char[] masterPass = masterPassInput.getPassword();
-            UtilUI.runOffTheEdt(
-                    () -> {
-                        try {
-                            client.unlock(masterPass);
-                        } finally {
-                            Arrays.fill(masterPass, '\0');
-                        }
-                    },
-                    () -> enableInputs(true),
-                    (exception) -> {
-                        enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedToUnlock")));
-                        LOG.log(System.Logger.Level.WARNING, "Failed to unlock", exception);
-                    }
-            );
-        });
-        masterPassInput.addActionListener(ae -> enableProgressButtonsIfBaseCheckOk());
         setWarnings(null);
+    }
+
+    private void executeUnlock() {
+        setWarnings(null);
+        enableInputs(false);
+        char[] masterPass = masterPassInput.getPassword();
+        UtilUI.runOffTheEdt(
+                () -> {
+                    try {
+                        client.unlock(masterPass);
+                    } finally {
+                        Arrays.fill(masterPass, '\0');
+                    }
+                },
+                () -> enableInputs(true), (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedToUnlock")));
+                    LOG.log(System.Logger.Level.WARNING, "Failed to unlock", exception);
+                }
+        );
+    }
+
+    private void executeLogout() {
+        setWarnings(null);
+        enableInputs(false);
+        UtilUI.runOffTheEdt(
+                () -> client.clear(),
+                () -> enableInputs(true),
+                (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedLogout")));
+                    LOG.log(System.Logger.Level.WARNING, "Failed to logout", exception);
+                }
+        );
     }
 
     private void enableInputs(boolean enabled) {

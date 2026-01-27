@@ -31,6 +31,7 @@ public class UtilUI {
     public static final ImageIcon FOLDER_ICON = createIcon(MaterialDesignF.FOLDER_OUTLINE, 16);
     public static final ImageIcon OFFICE_BUILDING_ICON = createIcon(MaterialDesignO.OFFICE_BUILDING_OUTLINE, 16);
     public static final ImageIcon FOLDER_NETWORK_ICON = createIcon(MaterialDesignF.FOLDER_NETWORK_OUTLINE, 16);
+    public static final ImageIcon FILTER_REMOVE_ICON = createIcon(MaterialDesignF.FILTER_REMOVE_OUTLINE, 16);
 
     public static <T> void runOffTheEdt(Callable<T> runOffEdt, Consumer<T> runOnEdt, Consumer<Throwable> errorHandler) {
         new SwingWorker<T, T>() {

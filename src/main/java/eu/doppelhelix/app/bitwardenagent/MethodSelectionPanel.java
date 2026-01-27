@@ -34,9 +34,6 @@ public class MethodSelectionPanel extends javax.swing.JPanel {
 
     private final BitwardenAuthenticator authenticator;
 
-    /**
-     * Creates new form MethodSelectionPanel
-     */
     public MethodSelectionPanel(BitwardenAuthenticator authenticator) {
         this.authenticator = authenticator;
         initComponents();
@@ -53,57 +50,59 @@ public class MethodSelectionPanel extends javax.swing.JPanel {
                 uriInput.setSelectedIndex(0);
             }
         }
-        cancelButton.addActionListener((ae) -> {
-            setWarnings(null);
-            enableInputs(false);
+        cancelButton.addActionListener((ae) -> executeCancel());
+        ssoButton.addActionListener(ae -> executeSso());
+        continueButton.addActionListener(ae -> executeContinue());
+        uriInput.addActionListener(ae -> enableProgressButtonsIfBaseCheckOk());
+        setWarnings(null);
+    }
+
+    private void executeCancel() {
+        setWarnings(null);
+        enableInputs(false);
+        UtilUI.runOffTheEdt(
+                () -> authenticator.cancel(),
+                () -> enableInputs(true),
+                (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
+                    LOG.log(Level.WARNING, "Failed to cancel", exception);
+                }
+        );
+    }
+
+    private void executeSso() {
+        validateUriAndRunIfOk((uri) -> {
             UtilUI.runOffTheEdt(
-                    () -> authenticator.cancel(),
+                () -> authenticator.startSso(uri),
+                (redirectUri) -> {
+                    try {
+                        Desktop.getDesktop().browse(redirectUri);
+                    } catch (IOException ex) {
+
+                    }
+                    enableInputs(true);},
+                (exception) -> {
+                    enableInputs(true);
+                    setWarnings(List.of(RESOURCE_BUNDLE.getString("failedStartSSO")));
+                    LOG.log(Level.WARNING, "Failed to start SSO", exception);
+                }
+            );
+        });
+    }
+
+    private void executeContinue() {
+        validateUriAndRunIfOk((uri) -> {
+            UtilUI.runOffTheEdt(
+                    () -> authenticator.startLogin(uri),
                     () -> enableInputs(true),
                     (exception) -> {
                         enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedCancel")));
-                        LOG.log(Level.WARNING, "Failed to cancel", exception);
+                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedStartLogin")));
+                        LOG.log(Level.WARNING, "Failed to start Login", exception);
                     }
             );
         });
-        ssoButton.addActionListener(ae -> {
-            validateUriAndRunIfOk((uri) -> {
-                UtilUI.runOffTheEdt(
-                    () -> authenticator.startSso(uri),
-                    (redirectUri) -> {
-                        try {
-                            Desktop.getDesktop().browse(redirectUri);
-                        } catch (IOException ex) {
-                            
-                        }
-                        enableInputs(true);},
-                    (exception) -> {
-                        enableInputs(true);
-                        setWarnings(List.of(RESOURCE_BUNDLE.getString("failedStartSSO")));
-                        LOG.log(Level.WARNING, "Failed to start SSO", exception);
-                    }
-                );
-            });
-        });
-        continueButton.addActionListener(ae -> {
-            validateUriAndRunIfOk((uri) -> {
-                UtilUI.runOffTheEdt(
-                        () -> authenticator.startLogin(uri),
-                        () -> enableInputs(true),
-                        (exception) -> {
-                            enableInputs(true);
-                            setWarnings(List.of(RESOURCE_BUNDLE.getString("failedStartLogin")));
-                            LOG.log(Level.WARNING, "Failed to start Login", exception);
-                        }
-                );
-            });
-        });
-        uriInput.addActionListener(ae -> {
-            if (uriInput.isEnabled()) {
-                enableProgressButtonsIfBaseCheckOk();
-            }
-        });
-        setWarnings(null);
     }
 
     private void enableProgressButtonsIfBaseCheckOk() {

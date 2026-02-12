@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.doppel-helix.app.bitwardenagent</groupId>
     <artifactId>bitwardenagent</artifactId>
-    <version>0.1</version>
+    <version>0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Bitwarden Agent</name>
 
@@ -25,7 +25,7 @@
         <url>https://github.com/matthiasblaesing/bitwardenagent</url>
         <connection>scm:git:https://github.com/matthiasblaesing/bitwardenagent.git</connection>
         <developerConnection>scm:git:git@github.com:matthiasblaesing/bitwardenagent.git</developerConnection>
-      <tag>bitwardenagent-0.1</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <build>

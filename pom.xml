@@ -21,6 +21,12 @@
         <dependency.version.ikonli>12.4.0</dependency.version.ikonli>
     </properties>
 
+    <scm>
+        <url>https://github.com/matthiasblaesing/bitwardenagent</url>
+        <connection>scm:git:https://github.com/matthiasblaesing/bitwardenagent.git</connection>
+        <developerConnection>scm:git:git@github.com:matthiasblaesing/bitwardenagent.git</developerConnection>
+    </scm>
+
     <build>
         <finalName>${artifactId}</finalName>
         <plugins>
@@ -90,6 +96,12 @@
                     <!-- Required to support mockito attaching to the running VM -->
                     <argLine>-XX:+EnableDynamicAgentLoading</argLine>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>3.3.1</version>
             </plugin>
         </plugins>
     </build>

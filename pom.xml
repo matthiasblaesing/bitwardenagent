@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.doppel-helix.app.bitwardenagent</groupId>
     <artifactId>bitwardenagent</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1</version>
     <packaging>jar</packaging>
     <name>Bitwarden Agent</name>
 
@@ -25,7 +25,8 @@
         <url>https://github.com/matthiasblaesing/bitwardenagent</url>
         <connection>scm:git:https://github.com/matthiasblaesing/bitwardenagent.git</connection>
         <developerConnection>scm:git:git@github.com:matthiasblaesing/bitwardenagent.git</developerConnection>
-    </scm>
+      <tag>bitwardenagent-0.1</tag>
+  </scm>
 
     <build>
         <finalName>${artifactId}</finalName>
@@ -47,7 +48,7 @@
                     <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer" />
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                         <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                             <resource>LICENSE</resource>
                         </transformer>
